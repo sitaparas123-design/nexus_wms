@@ -106,7 +106,7 @@ model SystemSettings {
   key       String   @unique
   value     String   @db.Text
   updatedAt DateTime @updatedAt
-  @@map("users")
+  @@map("systemsettings")
 }
 
 model Category {
@@ -316,7 +316,7 @@ model Warehouse {
   users               User[]
   clients             Client[]
   manager             User?               @relation("WarehouseManager", fields: [managerId], references: [id])
-  @@map("barcode")
+  @@map("Warehouse")
 }
 
 model LocationInventory {
@@ -415,7 +415,7 @@ model TransferItem {
   transfer InventoryTransfer @relation(fields: [transferId], references: [id])
   product  Product           @relation(fields: [productId], references: [id])
   batch    Batch             @relation(fields: [lotId], references: [id])
-  @@map("barcode")
+  @@map("transferitem")
 }
 
 model StockAdjustment {
@@ -497,7 +497,7 @@ model TransferOrder {
   sourceCompany      Company @relation("SourceCompany", fields: [sourceCompanyId], references: [id])
   destinationCompany Company @relation("DestCompany", fields: [destinationCompanyId], references: [id])
   product            Product @relation(fields: [productId], references: [id])
-  @@map("barcode")
+  @@map("transferorder")
 }
 
 model PickList {
