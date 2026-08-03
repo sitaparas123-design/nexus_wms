@@ -316,7 +316,7 @@ model Warehouse {
   users               User[]
   clients             Client[]
   manager             User?               @relation("WarehouseManager", fields: [managerId], references: [id])
-  @@map("warehouse")
+  @@map("Warehouse")
 }
 
 model LocationInventory {
