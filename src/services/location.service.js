@@ -1,5 +1,6 @@
 const locationRepository = require('../repositories/location.repository');
 const { getPaginationParams, formatPaginationMeta } = require('../utils/pagination');
+const prisma = require('../utils/prisma');
 
 class LocationService {
   async createLocation(companyId, payload) {
@@ -9,7 +10,6 @@ class LocationService {
 
     const code = payload.code || `${payload.zone}-${payload.aisle}-${payload.rack}-${payload.shelf}-${payload.bin}`.toUpperCase();
 
-    const prisma = require('../utils/prisma');
     const warehouseName = payload.warehouse || 'Main Warehouse';
     
     const facility = await prisma.warehouse.findFirst({
@@ -87,7 +87,6 @@ class LocationService {
 
   async updateLocation(id, companyId, payload) {
     const existingLocation = await this.getLocationById(id, companyId);
-    const prisma = require('../utils/prisma');
     
     const facility = await prisma.warehouse.findFirst({
       where: { name: existingLocation.warehouse, companyId }

@@ -211,11 +211,17 @@ const createSalesOrder = async (req, res) => {
 
     const orderNumber = `SO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    let companyId = req.user.companyId;
+    if (!companyId) {
+      const defaultCompany = await prisma.company.findFirst();
+      companyId = defaultCompany ? defaultCompany.id : undefined;
+    }
+
     const newOrder = await prisma.salesOrder.create({
       data: {
         orderNumber,
-        clientId,
-        companyId: req.user.companyId || clientId.companyId || null, // Best effort for super admin
+        client: { connect: { id: clientId } },
+        company: { connect: { id: companyId } },
         priority: priority || 'NORMAL',
         shippingAddress,
         poNumber,

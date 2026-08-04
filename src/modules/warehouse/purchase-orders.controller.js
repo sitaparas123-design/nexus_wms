@@ -133,7 +133,7 @@ const receiveGoods = async (req, res) => {
           data: {
             lotId: lot.lotId,
             productId: lot.productId,
-            ...(req.user.companyId ? { companyId: req.user.companyId } : {}),
+            companyId: order.companyId,
             mfgDate: lot.mfgDate ? new Date(lot.mfgDate) : null,
             expiryDate: lot.expiryDate ? new Date(lot.expiryDate) : null,
             coaLocked: false, // Inbound docs might not need lock if they trust vendor, or keep it true based on business rule
@@ -145,7 +145,7 @@ const receiveGoods = async (req, res) => {
         await tx.inventoryLedger.create({
           data: {
             productId: lot.productId,
-            ...(req.user.companyId ? { companyId: req.user.companyId } : {}),
+            companyId: order.companyId,
             location: lot.binLocation,
             quantityDelta: Number(lot.quantity),
             movementType: 'PO_RECEIPT'
