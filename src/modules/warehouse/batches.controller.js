@@ -51,6 +51,18 @@ const createBatch = async (req, res) => {
       }
     });
 
+    // Auto-generate a Tracking Barcode for this Batch
+    try {
+      const barcodeService = require('../../services/barcode.service');
+      await barcodeService.generateBarcode(companyId, {
+        productId: newBatch.productId,
+        batchId: newBatch.id,
+        barcodeType: 'CODE128'
+      });
+    } catch (bcError) {
+      console.error('Failed to auto-generate barcode for batch:', bcError);
+    }
+
     res.status(201).json(newBatch);
   } catch (error) {
     console.error('Error creating batch:', error);

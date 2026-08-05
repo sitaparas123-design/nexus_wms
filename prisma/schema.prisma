@@ -255,6 +255,7 @@ model Barcode {
   barcodeType String   @default("CODE128") // CODE128, QR
   productId   String
   batchId     String
+  trackingStatus String @default("GENERATED")
   companyId   String
   createdAt   DateTime @default(now())
 

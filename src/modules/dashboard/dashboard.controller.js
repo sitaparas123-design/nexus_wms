@@ -349,12 +349,24 @@ exports.getClientDashboard = async (req, res) => {
       }
     });
 
-    const allOrders = await prisma.salesOrder.findMany({
+    const allOrdersRaw = await prisma.salesOrder.findMany({
       where: whereCompany,
       include: { items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' }
     });
     
+    // Sanitize product details for client (remove unitCost)
+    const allOrders = allOrdersRaw.map(order => ({
+      ...order,
+      items: order.items.map(item => {
+        if (item.product) {
+          const { unitCost, ...safeProduct } = item.product;
+          return { ...item, product: safeProduct };
+        }
+        return item;
+      })
+    }));
+
     const totalSpend = allOrders.reduce((acc, order) => acc + (order.totalCost || 0), 0);
 
     // Fetch actual credit limit

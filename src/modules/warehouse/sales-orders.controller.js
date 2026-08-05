@@ -13,7 +13,17 @@ const getSalesOrders = async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(orders);
+    const formattedOrders = orders.map(order => ({
+      ...order,
+      items: order.items.map(item => {
+        if (req.user.role === 'CLIENT' && item.product) {
+          const { unitCost, ...safeProduct } = item.product;
+          return { ...item, product: safeProduct };
+        }
+        return item;
+      })
+    }));
+    res.json(formattedOrders);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });
