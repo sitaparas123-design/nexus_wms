@@ -15,13 +15,48 @@ exports.getSuperAdminDashboard = async (req, res) => {
     }, 0);
 
     // Revenue calculation from Sales Orders
+    const period = req.query.period || '30d';
+    let daysToSubtract = 30;
+    if (period === '7d') daysToSubtract = 7;
+    if (period === 'all') daysToSubtract = 36500; // 100 years for "all time"
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - daysToSubtract);
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - (daysToSubtract * 2));
+
     const salesOrders = await prisma.salesOrder.findMany({
-      select: { totalCost: true, companyId: true, status: true }
+      select: { totalCost: true, status: true, createdAt: true }
     });
 
-    const calculatedRevenue = salesOrders.reduce((acc, order) => acc + (order.totalCost || 0), 0);
-    const monthlyRevenue = calculatedRevenue > 0 ? calculatedRevenue : 48500;
-    const systemUptime = "99.98%";
+    let currentMonthRevenue = 0;
+    let previousMonthRevenue = 0;
+
+    salesOrders.forEach(order => {
+      if (['COMPLETED', 'SHIPPED', 'DELIVERED'].includes(order.status)) {
+        if (order.createdAt >= thirtyDaysAgo) {
+          currentMonthRevenue += (order.totalCost || 0);
+        } else if (order.createdAt >= sixtyDaysAgo && order.createdAt < thirtyDaysAgo) {
+          previousMonthRevenue += (order.totalCost || 0);
+        }
+      }
+    });
+
+    const monthlyRevenue = currentMonthRevenue;
+    let revenueGrowth = 0;
+    if (previousMonthRevenue > 0) {
+      revenueGrowth = ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100;
+    } else if (currentMonthRevenue > 0) {
+      revenueGrowth = 100;
+    }
+
+    // Fulfillment Rate
+    const recentOrders = salesOrders.filter(o => o.createdAt >= thirtyDaysAgo);
+    const totalRecentOrders = recentOrders.length;
+    const fulfilledOrders = recentOrders.filter(o => !['REJECTED', 'CANCELLED'].includes(o.status)).length;
+    const fulfillmentRate = totalRecentOrders > 0 
+      ? ((fulfilledOrders / totalRecentOrders) * 100).toFixed(1) + "%" 
+      : "100.0%";
 
     // Warehouse capacity metrics
     const warehouses = await prisma.warehouse.findMany({
@@ -33,14 +68,17 @@ exports.getSuperAdminDashboard = async (req, res) => {
       include: { locationInventories: { select: { quantity: true } } }
     });
 
-    let totalCapacity = warehouses.reduce((sum, w) => sum + (w.capacityValue || 0), 0);
-    if (totalCapacity === 0) totalCapacity = 25000;
+    let totalCapacity = locations.reduce((sum, l) => sum + (l.maxCapacity || 0), 0);
+    if (totalCapacity === 0) {
+      totalCapacity = warehouses.reduce((sum, w) => sum + (w.capacityValue || 0), 0);
+      if (totalCapacity === 0) totalCapacity = 25000;
+    }
 
     let occupiedCapacity = locations.reduce((sum, loc) => {
       return sum + loc.locationInventories.reduce((acc, i) => acc + (i.quantity || 0), 0);
     }, 0);
 
-    const utilizationPercent = Math.min(100, Math.round((occupiedCapacity / totalCapacity) * 100));
+    const utilizationPercent = totalCapacity > 0 ? Math.min(100, Math.round((occupiedCapacity / totalCapacity) * 100)) : 0;
 
     const auditLogs = await prisma.auditLog.findMany({
       take: 10,
@@ -54,7 +92,7 @@ exports.getSuperAdminDashboard = async (req, res) => {
       include: {
         _count: { select: { salesOrders: true, users: true, warehouses: true } },
         products: { select: { availableStock: true, unitCost: true, wholesalePrice: true } },
-        salesOrders: { select: { totalCost: true } }
+        salesOrders: { select: { totalCost: true, status: true, createdAt: true } }
       },
       orderBy: { createdAt: 'desc' },
       take: 10
@@ -62,7 +100,11 @@ exports.getSuperAdminDashboard = async (req, res) => {
 
     const companiesList = rawCompanies.map(c => {
       const companyInvVal = c.products?.reduce((acc, p) => acc + (p.availableStock || 0) * (p.unitCost || p.wholesalePrice || 0), 0) || 0;
-      const companyMrr = c.salesOrders?.reduce((acc, o) => acc + (o.totalCost || 0), 0) || 0;
+      
+      const companyMrr = c.salesOrders?.filter(o => 
+        ['COMPLETED', 'SHIPPED', 'DELIVERED'].includes(o.status) && o.createdAt >= thirtyDaysAgo
+      ).reduce((acc, o) => acc + (o.totalCost || 0), 0) || 0;
+
       return {
         id: c.id,
         name: c.name,
@@ -81,7 +123,8 @@ exports.getSuperAdminDashboard = async (req, res) => {
       activeCompanies,
       globalInventoryValue,
       monthlyRevenue,
-      systemUptime,
+      revenueGrowth,
+      fulfillmentRate,
       totalCapacity,
       occupiedCapacity,
       utilizationPercent,
@@ -177,6 +220,49 @@ exports.getManagerDashboard = async (req, res) => {
       capacityPercentage = Math.round((totalOccupied / totalMaxCapacity) * 100);
     }
 
+    // 7. Gauges (Picking, Packing, Shipping)
+    const allOrders = await prisma.salesOrder.findMany({ where: whereCompany });
+    const activeOrdersForGauges = allOrders.filter(o => !['DELIVERED', 'CANCELLED', 'REJECTED'].includes(o.status));
+    const totalActiveOrders = activeOrdersForGauges.length > 0 ? activeOrdersForGauges.length : 1;
+
+    // Packing
+    const packedCount = activeOrdersForGauges.filter(o => ['PACKED', 'READY_TO_SHIP', 'SHIPPED'].includes(o.status)).length;
+    const packingGauge = { actual: packedCount, total: activeOrdersForGauges.length, percent: Math.round((packedCount / totalActiveOrders) * 100) };
+
+    // Shipping
+    const shipments = await prisma.shipment.findMany({ where: whereCompany });
+    const activeShipments = shipments.filter(s => !['DELIVERED', 'CANCELLED'].includes(s.status));
+    const shippedCount = activeShipments.filter(s => ['SHIPPED', 'IN_TRANSIT'].includes(s.status)).length;
+    const totalShipments = activeShipments.length > 0 ? activeShipments.length : 1;
+    const shippingGauge = { actual: shippedCount, total: activeShipments.length, percent: Math.round((shippedCount / totalShipments) * 100) };
+
+    // Picking
+    const pickLists = await prisma.pickList.findMany({ where: whereCompany, include: { items: true } });
+    let pickTotalItems = 0;
+    let pickPickedItems = 0;
+    pickLists.forEach(pl => {
+      if(pl.status !== 'CANCELLED') {
+        pl.items.forEach(item => {
+          pickTotalItems += item.targetQuantity || 0;
+          pickPickedItems += item.pickedQuantity || 0;
+        });
+      }
+    });
+    const pickGauge = { actual: pickPickedItems, total: pickTotalItems, percent: pickTotalItems > 0 ? Math.round((pickPickedItems / pickTotalItems) * 100) : 0 };
+
+    // 8. Efficiency Trend (Past 7 Days Shipments)
+    const past7Days = [...Array(7)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return d.toISOString().split('T')[0];
+    }).reverse();
+
+    const dailyShipments = past7Days.map(dateStr => {
+      return shipments.filter(s => s.createdAt.toISOString().startsWith(dateStr)).length;
+    });
+    const maxShipments = Math.max(...dailyShipments, 1);
+    const efficiencyData = dailyShipments.map(val => Math.round((val / maxShipments) * 100));
+
     res.json({
       warehouseCapacity: totalMaxCapacity,
       capacityPercentage,
@@ -189,6 +275,12 @@ exports.getManagerDashboard = async (req, res) => {
       nearExpiryBatches,
       incomingShipments,
       recentShipments,
+      gauges: {
+        picking: pickGauge,
+        packing: packingGauge,
+        shipping: shippingGauge
+      },
+      efficiencyData
     });
   } catch (error) {
     console.error('Manager Dashboard Error:', error);
@@ -265,9 +357,17 @@ exports.getClientDashboard = async (req, res) => {
     
     const totalSpend = allOrders.reduce((acc, order) => acc + (order.totalCost || 0), 0);
 
-    const availableCredits = 25000;
-    const totalProductsCount = await prisma.product.count();
-    const coasPending = totalProductsCount > 0 ? totalProductsCount : 3;
+    // Fetch actual credit limit
+    const clientRecord = clientId ? await prisma.client.findUnique({ where: { id: clientId } }) : null;
+    const availableCredits = clientRecord?.creditLimit || 0;
+
+    // Fetch actual pending COAs
+    const coasPending = await prisma.batch.count({
+      where: {
+        ...whereCompany,
+        coaLocked: true
+      }
+    });
 
     const recentOrders = allOrders.slice(0, 5);
     const mostRecentOrder = allOrders[0] || null;
@@ -285,4 +385,3 @@ exports.getClientDashboard = async (req, res) => {
     res.status(500).json({ error: error.message || 'Failed to fetch client dashboard data.' });
   }
 };
-
