@@ -32,7 +32,7 @@ class BarcodeService {
             { barcode: code },
             { sku: code }
           ],
-          companyId
+          companyId: companyId ?? undefined
         }
       });
 
@@ -101,7 +101,7 @@ class BarcodeService {
 
     // Fallback: Also show Products with UPC barcodes in the registry for visibility
     const productsWithBarcode = await prisma.product.findMany({
-      where: { companyId, barcode: { not: null } }
+      where: { companyId: companyId ?? undefined, barcode: { not: null } }
     });
 
     const validProducts = productsWithBarcode.filter(p => p.barcode && p.barcode.trim() !== '');
