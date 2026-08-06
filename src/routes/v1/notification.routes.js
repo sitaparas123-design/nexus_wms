@@ -8,28 +8,8 @@ router.use(verifyToken);
 // GET /api/v1/notifications - fetch notifications for user
 router.get('/', async (req, res) => {
   try {
-    let where;
-    if (req.user.role === 'SUPER_ADMIN') {
-      where = {
-        OR: [
-          { userId: req.user.id },
-          { userId: null }
-        ]
-      };
-    } else {
-      where = {
-        OR: [
-          { userId: req.user.id },
-          {
-            userId: null,
-            companyId: req.user.companyId
-          }
-        ]
-      };
-    }
-
     const notifications = await prisma.notification.findMany({
-      where,
+      where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
       take: 50
     });
@@ -43,28 +23,8 @@ router.get('/', async (req, res) => {
 // PUT /api/v1/notifications/read-all - mark all as read
 router.put('/read-all', async (req, res) => {
   try {
-    let where;
-    if (req.user.role === 'SUPER_ADMIN') {
-      where = {
-        OR: [
-          { userId: req.user.id },
-          { userId: null }
-        ]
-      };
-    } else {
-      where = {
-        OR: [
-          { userId: req.user.id },
-          {
-            userId: null,
-            companyId: req.user.companyId
-          }
-        ]
-      };
-    }
-
     await prisma.notification.updateMany({
-      where,
+      where: { userId: req.user.id, read: false },
       data: { read: true }
     });
 
