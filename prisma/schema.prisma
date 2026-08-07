@@ -8,15 +8,15 @@ datasource db {
 }
 
 model Company {
-  id        String   @id @default(uuid())
-  name      String
+  id         String   @id @default(uuid())
+  name       String
   clientCode String?
-  industry  String?
-  status    String   @default("ACTIVE")
-  email     String?
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  industry   String?
+  status     String   @default("ACTIVE")
+  email      String?
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   users              User[]
   categories         Category[]
@@ -40,41 +40,43 @@ model Company {
   shipments          Shipment[]
   warehouses         Warehouse[]
   invoices           Invoice[]
+
   @@map("company")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String // SUPER_ADMIN, WAREHOUSE_MANAGER, INVENTORY_CLERK, CLIENT
-  status    String   @default("ACTIVE")
-  phone     String?
-  jobTitle  String?
-  companyId String?
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        String // SUPER_ADMIN, WAREHOUSE_MANAGER, INVENTORY_CLERK, CLIENT
+  status      String   @default("ACTIVE")
+  phone       String?
+  jobTitle    String?
+  companyId   String?
   warehouseId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  company            Company?            @relation(fields: [companyId], references: [id])
-  warehouse          Warehouse?          @relation(fields: [warehouseId], references: [id])
+  company            Company?            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  warehouse          Warehouse?          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   auditLogs          AuditLog[]
   notifications      Notification[]
   receivings         Receiving[]         @relation("InspectorUser")
   createdTransfers   InventoryTransfer[] @relation("TransferCreatedUser")
   createdAdjustments StockAdjustment[]   @relation("AdjustmentCreatedUser")
   managedWarehouses  Warehouse[]         @relation("WarehouseManager")
+
   @@map("user")
 }
 
 model Client {
-  id          String   @id @default(uuid())
-  name        String
-  creditLimit Float    @default(0.0)
-  tier        String   @default("STANDARD")
-  email       String?
-  phone       String?
+  id              String   @id @default(uuid())
+  name            String
+  creditLimit     Float    @default(0.0)
+  tier            String   @default("STANDARD")
+  email           String?
+  phone           String?
   address         String?
   shippingAddress String?
   gstNumber       String?
@@ -85,10 +87,11 @@ model Client {
   warehouseId     String?
   password        String?
 
-  company     Company?   @relation(fields: [companyId], references: [id])
-  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
+  company     Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse?   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   salesOrders SalesOrder[]
   invoices    Invoice[]
+
   @@map("client")
 }
 
@@ -99,7 +102,8 @@ model AuditLog {
   ipAddress String?
   timestamp DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("auditlog")
 }
 
@@ -108,6 +112,7 @@ model SystemSettings {
   key       String   @unique
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+
   @@map("systemsettings")
 }
 
@@ -121,8 +126,9 @@ model Category {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  company  Company   @relation(fields: [companyId], references: [id])
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   products Product[]
+
   @@map("category")
 }
 
@@ -150,8 +156,8 @@ model Product {
   deletedAt      DateTime?
   attributes     Json?
 
-  company             Company             @relation(fields: [companyId], references: [id])
-  categoryRef         Category?           @relation(fields: [categoryId], references: [id])
+  company             Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  categoryRef         Category?             @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   inventory           InventoryLedger[]
   batches             Batch[]
   locationInventories LocationInventory[]
@@ -166,6 +172,7 @@ model Product {
   salesOrderItems     SalesOrderItem[]
   purchaseOrderItems  PurchaseOrderItem[]
   specification       ProductSpecification?
+
   @@map("product")
 }
 
@@ -178,7 +185,8 @@ model ProductSpecification {
   height    Float?
   volume    Float?
 
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   @@map("productspecification")
 }
 
@@ -187,7 +195,7 @@ model Receiving {
   receivingNumber String   @unique
   poNumber        String?
   supplier        String
-  warehouse       String?  // Associated Facility name
+  warehouse       String? // Associated Facility name
   status          String   @default("PENDING") // PENDING, IN_INSPECTION, COMPLETED, REJECTED
   receivedAt      DateTime @default(now())
   inspectorId     String?
@@ -197,9 +205,10 @@ model Receiving {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  company   Company         @relation(fields: [companyId], references: [id])
-  inspector User?           @relation("InspectorUser", fields: [inspectorId], references: [id])
+  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  inspector User?           @relation("InspectorUser", fields: [inspectorId], references: [id], onDelete: Cascade)
   items     ReceivingItem[]
+
   @@map("receiving")
 }
 
@@ -215,9 +224,10 @@ model ReceivingItem {
   companyId       String
   createdAt       DateTime @default(now())
 
-  receiving Receiving @relation(fields: [receivingId], references: [id])
-  product   Product   @relation(fields: [productId], references: [id])
+  receiving Receiving @relation(fields: [receivingId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   batches   Batch[]
+
   @@map("receivingitem")
 }
 
@@ -238,8 +248,8 @@ model Batch {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  product             Product             @relation(fields: [productId], references: [id])
-  company             Company             @relation(fields: [companyId], references: [id])
+  product             Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   receivingItem       ReceivingItem?      @relation(fields: [receivingItemId], references: [id])
   barcodes            Barcode[]
   locationInventories LocationInventory[]
@@ -248,49 +258,52 @@ model Batch {
   stockAdjustments    StockAdjustment[]
   expiryAlerts        ExpiryAlert[]
   pickListItems       PickListItem[]
+
   @@map("batch")
 }
 
 model Barcode {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  barcodeType String   @default("CODE128") // CODE128, QR
-  productId   String
-  batchId     String
-  trackingStatus String @default("GENERATED")
-  companyId   String
-  createdAt   DateTime @default(now())
+  id             String   @id @default(uuid())
+  code           String   @unique
+  barcodeType    String   @default("CODE128") // CODE128, QR
+  productId      String
+  batchId        String
+  trackingStatus String   @default("GENERATED")
+  companyId      String
+  createdAt      DateTime @default(now())
 
-  product Product @relation(fields: [productId], references: [id])
-  batch   Batch   @relation(fields: [batchId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
   @@map("barcode")
 }
 
 model Location {
-  id          String    @id @default(uuid())
-  code        String?
-  name        String?
-  warehouse   String    @default("Main Warehouse")
-  zone        String
-  aisle       String
-  rack        String
-  shelf       String
-  bin         String    @default("A1")
-  capacityType String   @default("Items")
-  maxCapacity Int       @default(1000)
-  occupied    Int       @default(0)
-  status      String    @default("Active")
-  companyId   String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id           String    @id @default(uuid())
+  code         String?
+  name         String?
+  warehouse    String    @default("Main Warehouse")
+  zone         String
+  aisle        String
+  rack         String
+  shelf        String
+  bin          String    @default("A1")
+  capacityType String    @default("Items")
+  maxCapacity  Int       @default(1000)
+  occupied     Int       @default(0)
+  status       String    @default("Active")
+  companyId    String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
-  company             Company             @relation(fields: [companyId], references: [id])
+  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   locationInventories LocationInventory[]
   inventoryLedgers    InventoryLedger[]
   sourceTransfers     InventoryTransfer[] @relation("SourceLocation")
   destTransfers       InventoryTransfer[] @relation("DestLocation")
   stockAdjustments    StockAdjustment[]
+
   @@map("location")
 }
 
@@ -306,44 +319,45 @@ model Warehouse {
   managerName    String?
   managerId      String?
   contactPhone   String?
-  capacityType   String?  // Items, Kg, Pallets, CBM
+  capacityType   String? // Items, Kg, Pallets, CBM
   capacityValue  Float?
-  facilityType   String?  // e.g. "Cold Storage", "Hazardous", "General"
-  supportedItems String?  // e.g. "Perishables, Pharmaceuticals"
+  facilityType   String? // e.g. "Cold Storage", "Hazardous", "General"
+  supportedItems String? // e.g. "Perishables, Pharmaceuticals"
   companyId      String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  company             Company             @relation(fields: [companyId], references: [id])
+  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   locationInventories LocationInventory[]
   users               User[]
   clients             Client[]
-  manager             User?               @relation("WarehouseManager", fields: [managerId], references: [id])
+  manager             User?               @relation("WarehouseManager", fields: [managerId], references: [id], onDelete: Cascade)
+
   @@map("warehouse")
 }
 
 model LocationInventory {
-  id         String   @id @default(uuid())
-  locationId String
-  productId  String
+  id           String    @id @default(uuid())
+  locationId   String
+  productId    String
   lotId        String?
   warehouseId  String?
-  quantity     Int      @default(0)
-  reserved     Int      @default(0)
-  available    Int      @default(0)
+  quantity     Int       @default(0)
+  reserved     Int       @default(0)
+  available    Int       @default(0)
   lotNumber    String?
   batchNumber  String?
   serialNumber String?
   expiryDate   DateTime?
   companyId    String
-  createdAt    DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  location Location @relation(fields: [locationId], references: [id])
-  product  Product  @relation(fields: [productId], references: [id])
-  batch    Batch?   @relation(fields: [lotId], references: [id])
-  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
-  company  Company  @relation(fields: [companyId], references: [id])
+  location  Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch     Batch?     @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([locationId, productId, lotId])
   @@map("locationinventory")
@@ -358,8 +372,8 @@ model Inventory {
   availableStock Int      @default(0)
   updatedAt      DateTime @updatedAt
 
-  product Product @relation(fields: [productId], references: [id])
-  company Company @relation(fields: [companyId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([productId, companyId])
   @@map("inventory")
@@ -381,10 +395,11 @@ model InventoryLedger {
   createdBy        String?
   timestamp        DateTime @default(now())
 
-  product Product   @relation(fields: [productId], references: [id])
-  batch   Batch?    @relation(fields: [lotId], references: [id])
-  company Company   @relation(fields: [companyId], references: [id])
-  locRef  Location? @relation(fields: [locationId], references: [id])
+  product Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch   Batch?    @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  company Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  locRef  Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
   @@map("inventoryledger")
 }
 
@@ -400,11 +415,12 @@ model InventoryTransfer {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  company        Company        @relation(fields: [companyId], references: [id])
-  sourceLocation Location       @relation("SourceLocation", fields: [sourceLocationId], references: [id])
-  destLocation   Location       @relation("DestLocation", fields: [destLocationId], references: [id])
-  creator        User?          @relation("TransferCreatedUser", fields: [createdBy], references: [id])
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sourceLocation Location       @relation("SourceLocation", fields: [sourceLocationId], references: [id], onDelete: Cascade)
+  destLocation   Location       @relation("DestLocation", fields: [destLocationId], references: [id], onDelete: Cascade)
+  creator        User?          @relation("TransferCreatedUser", fields: [createdBy], references: [id], onDelete: Cascade)
   items          TransferItem[]
+
   @@map("inventorytransfer")
 }
 
@@ -415,9 +431,10 @@ model TransferItem {
   lotId      String
   quantity   Int
 
-  transfer InventoryTransfer @relation(fields: [transferId], references: [id])
-  product  Product           @relation(fields: [productId], references: [id])
-  batch    Batch             @relation(fields: [lotId], references: [id])
+  transfer InventoryTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product  Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch    Batch             @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
   @@map("transferitem")
 }
 
@@ -434,11 +451,12 @@ model StockAdjustment {
   companyId        String
   createdAt        DateTime @default(now())
 
-  product  Product  @relation(fields: [productId], references: [id])
-  batch    Batch    @relation(fields: [lotId], references: [id])
-  location Location @relation(fields: [locationId], references: [id])
-  creator  User?    @relation("AdjustmentCreatedUser", fields: [createdBy], references: [id])
-  company  Company  @relation(fields: [companyId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch    Batch    @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  creator  User?    @relation("AdjustmentCreatedUser", fields: [createdBy], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@map("stockadjustment")
 }
 
@@ -453,9 +471,10 @@ model ExpiryAlert {
   companyId     String
   createdAt     DateTime @default(now())
 
-  batch   Batch   @relation(fields: [lotId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
-  company Company @relation(fields: [companyId], references: [id])
+  batch   Batch   @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@map("expiryalert")
 }
 
@@ -470,8 +489,9 @@ model PurchaseOrder {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  company Company             @relation(fields: [companyId], references: [id])
+  company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   items   PurchaseOrderItem[]
+
   @@map("purchaseorder")
 }
 
@@ -482,8 +502,9 @@ model PurchaseOrderItem {
   quantity        Int
   unitCost        Float  @default(0.0)
 
-  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  product       Product       @relation(fields: [productId], references: [id])
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   @@map("purchaseorderitem")
 }
 
@@ -497,9 +518,10 @@ model TransferOrder {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  sourceCompany      Company @relation("SourceCompany", fields: [sourceCompanyId], references: [id])
-  destinationCompany Company @relation("DestCompany", fields: [destinationCompanyId], references: [id])
-  product            Product @relation(fields: [productId], references: [id])
+  sourceCompany      Company @relation("SourceCompany", fields: [sourceCompanyId], references: [id], onDelete: Cascade)
+  destinationCompany Company @relation("DestCompany", fields: [destinationCompanyId], references: [id], onDelete: Cascade)
+  product            Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   @@map("transferorder")
 }
 
@@ -511,8 +533,9 @@ model PickList {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company Company        @relation(fields: [companyId], references: [id])
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   items   PickListItem[]
+
   @@map("picklist")
 }
 
@@ -526,9 +549,10 @@ model PickListItem {
   pickedQuantity Int     @default(0)
   picked         Boolean @default(false)
 
-  pickList PickList @relation(fields: [pickListId], references: [id])
-  product  Product  @relation(fields: [productId], references: [id])
-  batch    Batch?   @relation(fields: [batchId], references: [id])
+  pickList PickList @relation(fields: [pickListId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch    Batch?   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
   @@map("picklistitem")
 }
 
@@ -547,10 +571,11 @@ model SalesOrder {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  client  Client           @relation(fields: [clientId], references: [id])
-  company Company          @relation(fields: [companyId], references: [id])
-  items   SalesOrderItem[]
+  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  company  Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items    SalesOrderItem[]
   invoices Invoice[]
+
   @@map("salesorder")
 }
 
@@ -560,10 +585,10 @@ model SalesOrderItem {
   productId    String
   quantity     Int
 
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
-  product    Product    @relation(fields: [productId], references: [id])
-  @@map("salesorderitem")
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@map("salesorderitem")
 }
 
 model Notification {
@@ -575,8 +600,9 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user    User?   @relation(fields: [userId], references: [id])
-  company Company @relation(fields: [companyId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@map("notification")
 }
 
@@ -594,7 +620,8 @@ model Shipment {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@map("shipment")
 }
 
@@ -610,8 +637,9 @@ model Invoice {
   createdAt   DateTime  @default(now())
   paidAt      DateTime?
 
-  salesOrder  SalesOrder @relation(fields: [orderId], references: [id])
-  client      Client     @relation(fields: [clientId], references: [id])
-  company     Company    @relation(fields: [companyId], references: [id])
+  salesOrder SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  client     Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@map("invoice")
 }
