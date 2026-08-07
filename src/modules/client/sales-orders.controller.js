@@ -88,8 +88,7 @@ const createSalesOrder = async (req, res) => {
     await NotificationService.send({
       title: 'New Order Request',
       message: `A new order request (${order.id}) has been placed and is pending review.`,
-      ...(req.user.companyId ? { companyId: req.user.companyId } : {}),
-      targetRoles: ['SUPER_ADMIN', 'WAREHOUSE_MANAGER']
+      ...(req.user.companyId ? { companyId: req.user.companyId } : {})
     });
 
     res.status(201).json(order);

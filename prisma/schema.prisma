@@ -39,6 +39,7 @@ model Company {
   notifications      Notification[]
   shipments          Shipment[]
   warehouses         Warehouse[]
+  invoices           Invoice[]
   @@map("company")
 }
 
@@ -87,6 +88,7 @@ model Client {
   company     Company?   @relation(fields: [companyId], references: [id])
   warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
   salesOrders SalesOrder[]
+  invoices    Invoice[]
   @@map("client")
 }
 
@@ -548,6 +550,7 @@ model SalesOrder {
   client  Client           @relation(fields: [clientId], references: [id])
   company Company          @relation(fields: [companyId], references: [id])
   items   SalesOrderItem[]
+  invoices Invoice[]
   @@map("salesorder")
 }
 
@@ -593,4 +596,22 @@ model Shipment {
 
   company Company @relation(fields: [companyId], references: [id])
   @@map("shipment")
+}
+
+model Invoice {
+  id          String    @id @default(uuid())
+  invoiceNo   String    @unique
+  orderId     String
+  clientId    String
+  companyId   String
+  items       Json
+  totalAmount Decimal
+  status      String    @default("UNPAID")
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+
+  salesOrder  SalesOrder @relation(fields: [orderId], references: [id])
+  client      Client     @relation(fields: [clientId], references: [id])
+  company     Company    @relation(fields: [companyId], references: [id])
+  @@map("invoice")
 }

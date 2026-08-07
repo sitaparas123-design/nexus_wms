@@ -2,17 +2,24 @@ const prisma = require('../../utils/prisma');
 
 const getProducts = async (req, res) => {
   try {
+    const isClient = req.user.role === 'CLIENT';
+
+    const where = {
+      companyId: req.user.companyId,
+      status: { not: 'DELETED' },
+    };
+
+    // CLIENT: only show products with available stock > 0
+    if (isClient) {
+      where.availableStock = { gt: 0 };
+    }
+
     const products = await prisma.product.findMany({
-      where: { 
-        companyId: req.user.companyId,
-        status: { not: 'DELETED' }
-      },
+      where,
       include: {
         specification: true
       }
     });
-
-    const isClient = req.user.role === 'CLIENT';
 
     const formattedProducts = products.map(product => {
       const p = { ...product };
