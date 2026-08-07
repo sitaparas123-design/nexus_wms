@@ -72,7 +72,7 @@ class LocationRepository {
 
   async softDelete(id, companyId) {
     return await prisma.location.updateMany({
-      where: { id, companyId },
+      where: { id, ...(companyId ? { companyId } : {}) },
       data: { deletedAt: new Date() },
     });
   }

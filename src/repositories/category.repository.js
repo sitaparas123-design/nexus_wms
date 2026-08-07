@@ -49,7 +49,7 @@ class CategoryRepository {
 
   async softDelete(id, companyId) {
     return await prisma.category.updateMany({
-      where: { id, companyId },
+      where: { id, ...(companyId ? { companyId } : {}) },
       data: { deletedAt: new Date() },
     });
   }

@@ -66,7 +66,7 @@ class ProductRepository {
 
   async softDelete(id, companyId) {
     return await prisma.product.updateMany({
-      where: { id, companyId },
+      where: { id, ...(companyId ? { companyId } : {}) },
       data: { deletedAt: new Date() },
     });
   }
