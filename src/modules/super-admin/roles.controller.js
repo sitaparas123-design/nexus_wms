@@ -8,7 +8,6 @@ const defaultPermissions = {
     'batch.view', 'batch.create', 'batch.edit', 'batch.delete',
     'expiry.view', 'expiry.manage',
     'po.view', 'po.create', 'po.edit', 'po.approve', 'po.receive', 'po.delete',
-    'receiving.execute',
     'to.view', 'to.create', 'to.edit', 'to.execute', 'to.delete',
     'so.view', 'so.create', 'so.edit', 'so.pick', 'so.ship', 'so.delete', 'so.approve',
     'warehouse.view', 'warehouse.manage', 'warehouse.zones', 'warehouse.locations',
@@ -23,6 +22,7 @@ const defaultPermissions = {
     'roles.view', 'roles.manage',
     'audit.view', 'audit.export',
     'settings.view', 'settings.manage', 'settings.system',
+    'receiving.execute',
   ],
   WAREHOUSE_MANAGER: [
     'dashboard.view', 'dashboard.analytics',
