@@ -29,7 +29,7 @@ exports.getProductById = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { items, meta } = await productService.getProducts(req.user.companyId, req.query);
+    const { items, meta } = await productService.getProducts(req.user.companyId, req.query, req.user.originalCompanyId);
     return paginatedResponse(res, items, meta, 'Products retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);

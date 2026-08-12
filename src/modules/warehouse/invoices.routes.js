@@ -44,4 +44,42 @@ router.get('/invoices', verifyToken, requireRole(allowedRoles), async (req, res)
   }
 });
 
+/**
+ * PUT /invoices/:id/status
+ * Updates the status of an invoice.
+ */
+router.put('/invoices/:id/status', verifyToken, requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), async (req, res) => {
+  try {
+    const prisma = require('../../utils/prisma');
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+
+    const { companyId } = req.user;
+    const where = { id };
+    if (companyId) where.companyId = companyId;
+
+    const invoice = await prisma.invoice.findFirst({ where });
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data: { 
+        status,
+        ...(status === 'PAID' && !invoice.paidAt ? { paidAt: new Date() } : {})
+      }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Invoice update error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 module.exports = router;

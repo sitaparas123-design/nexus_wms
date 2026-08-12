@@ -3,7 +3,14 @@ const { successResponse, errorResponse, paginatedResponse } = require('../utils/
 
 exports.createReceiving = async (req, res) => {
   try {
-    const receiving = await receivingService.createReceiving(req.user.companyId, req.user.id, req.body);
+    let companyId = req.user.companyId || req.user.originalCompanyId;
+    if (!companyId) {
+      const prisma = require('../utils/prisma');
+      const defaultCompany = await prisma.company.findFirst();
+      if (!defaultCompany) throw new Error('No company found in database');
+      companyId = defaultCompany.id;
+    }
+    const receiving = await receivingService.createReceiving(companyId, req.user.id, req.body);
     return successResponse(res, receiving, 'Receiving order created successfully', 201);
   } catch (error) {
     return errorResponse(res, error.message, 400);

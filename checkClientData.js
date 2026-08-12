@@ -2,8 +2,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  const users = await prisma.user.findMany();
-  console.log(users.map(u => `${u.id} - ${u.email} - ${u.role}`).join('\n'));
+  const clients = await prisma.client.findMany();
+  console.log(JSON.stringify(clients, null, 2));
 }
 
 main()
