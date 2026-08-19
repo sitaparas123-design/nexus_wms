@@ -7,7 +7,7 @@ async function main() {
   const email = 'm@gmail.com';
   
   // Find super admin's company to attach to
-  const superAdmin = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
+  const superAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
   
   const user = await prisma.user.upsert({
     where: { email },

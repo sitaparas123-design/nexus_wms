@@ -23,7 +23,7 @@ async function main() {
         name: 'Alex Morgan',
         email: 'alex@stitchnexus.com',
         password: hashedPassword,
-        role: 'SUPER_ADMIN',
+        role: 'ADMIN',
         companyId: company.id,
       },
       {

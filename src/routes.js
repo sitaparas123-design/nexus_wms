@@ -4,6 +4,15 @@ const router = express.Router();
 // Health check
 router.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// Public Routes
+const plansController = require('./modules/super-admin/plans.controller');
+const paymentsController = require('./modules/super-admin/payments.controller');
+
+router.get('/public/plans', plansController.getPublicPlans);
+router.post('/public/payments/checkout', paymentsController.createCheckoutSession);
+router.post('/public/payments/verify', paymentsController.verifyPayment);
+
+
 const superAdminRoutes = require('./modules/super-admin');
 const warehouseRoutes = require('./modules/warehouse');
 const clientRoutes = require('./modules/client');

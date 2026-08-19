@@ -7,9 +7,9 @@ router.use(verifyToken); // All endpoints require auth
 
 // Clients can view products, but creating products is for managers/admins
 router.get('/', productsController.getProducts);
-router.post('/bulk', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), productsController.createBulkProducts);
-router.post('/', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), productsController.createProduct);
-router.put('/:id', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), productsController.updateProduct);
-router.delete('/:id', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), productsController.deleteProduct);
+router.post('/bulk', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), productsController.createBulkProducts);
+router.post('/', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), productsController.createProduct);
+router.put('/:id', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), productsController.updateProduct);
+router.delete('/:id', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), productsController.deleteProduct);
 
 module.exports = router;

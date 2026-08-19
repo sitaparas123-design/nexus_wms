@@ -9,7 +9,7 @@ async function main() {
       name: true 
     },
     where: {
-      role: { in: ['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK'] }
+      role: { in: ['ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK'] }
     }
   });
   console.log(JSON.stringify(users, null, 2));

@@ -3,7 +3,9 @@ const { successResponse, errorResponse, paginatedResponse } = require('../utils/
 
 exports.getBinInventory = async (req, res) => {
   try {
-    const { items, meta } = await inventoryService.getBinInventory(req.user.companyId, req.query);
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const { items, meta } = await inventoryService.getBinInventory(filterCompanyId, req.query);
     return paginatedResponse(res, items, meta, 'Bin inventory stock mapping retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);
@@ -12,7 +14,9 @@ exports.getBinInventory = async (req, res) => {
 
 exports.getInventorySummary = async (req, res) => {
   try {
-    const { items, meta } = await inventoryService.getInventorySummary(req.user.companyId, req.query);
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const { items, meta } = await inventoryService.getInventorySummary(filterCompanyId, req.query);
     return paginatedResponse(res, items, meta, 'Company inventory aggregate totals retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);
@@ -21,7 +25,9 @@ exports.getInventorySummary = async (req, res) => {
 
 exports.getInventoryTransactions = async (req, res) => {
   try {
-    const { items, meta } = await inventoryService.getInventoryTransactions(req.user.companyId, req.query);
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const { items, meta } = await inventoryService.getInventoryTransactions(filterCompanyId, req.query);
     return paginatedResponse(res, items, meta, 'Immutable inventory transaction ledger retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);

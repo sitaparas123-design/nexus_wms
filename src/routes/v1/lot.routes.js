@@ -5,9 +5,9 @@ const { verifyToken, requireRole } = require('../../middlewares/auth');
 
 router.use(verifyToken);
 
-router.post('/', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']), lotController.createLot);
+router.post('/', requireRole(['ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']), lotController.createLot);
 router.get('/', lotController.getLots);
 router.get('/:id', lotController.getLotById);
-router.patch('/:id/status', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), lotController.updateLotStatus);
+router.patch('/:id/status', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), lotController.updateLotStatus);
 
 module.exports = router;

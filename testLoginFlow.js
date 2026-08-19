@@ -37,7 +37,7 @@ const request = (method, path, body, token) => {
 
 async function main() {
   try {
-    console.log('1. Login as Super Admin (alex@stitchnexus.com)...');
+    console.log('1. Login as Admin (alex@stitchnexus.com)...');
     const loginRes = await request('POST', '/api/auth/login', { email: 'alex@stitchnexus.com', password: '123456' });
     const adminToken = loginRes.data.token;
 

@@ -15,8 +15,9 @@ const getCompanies = async (req, res) => {
 
 const getPickLists = async (req, res) => {
   try {
-    const { companyId } = req.user;
-    const where = companyId ? { companyId } : {};
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const where = filterCompanyId ? { companyId: filterCompanyId } : {};
     const pickLists = await prisma.pickList.findMany({
       where,
       include: {
@@ -203,8 +204,20 @@ const updateLocation = async (req, res) => {
 
 const getShipments = async (req, res) => {
   try {
-    const { companyId } = req.user;
-    const where = companyId ? { companyId } : {};
+    const { companyId, role, id: userId } = req.user;
+    let where = {};
+    
+    if (role === 'CLIENT') {
+      const clientOrders = await prisma.salesOrder.findMany({
+        where: { clientId: userId },
+        select: { id: true }
+      });
+      const orderIds = clientOrders.map(o => o.id);
+      where.orderId = { in: orderIds };
+    } else if (role !== 'ADMIN' && companyId) {
+      where.companyId = companyId;
+    }
+    
     const shipments = await prisma.shipment.findMany({
       where,
       orderBy: { createdAt: 'desc' }

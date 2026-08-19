@@ -11,7 +11,7 @@ const getUsers = async (req, res) => {
     if (req.query.companyId) {
       where.companyId = req.query.companyId;
     }
-    if (req.user.role !== 'SUPER_ADMIN' && req.user.companyId) {
+    if (req.user.role !== 'ADMIN' && req.user.companyId) {
       where.companyId = req.user.companyId;
     }
 
@@ -19,7 +19,7 @@ const getUsers = async (req, res) => {
     if (req.query.companyId) {
       clientWhere.companyId = req.query.companyId;
     }
-    if (req.user.role !== 'SUPER_ADMIN' && req.user.companyId) {
+    if (req.user.role !== 'ADMIN' && req.user.companyId) {
       clientWhere.companyId = req.user.companyId;
     }
 
@@ -87,7 +87,10 @@ const getUsers = async (req, res) => {
         return res.status(403).json({ message: 'Managers can only create Clerks' });
       }
     } else {
-      const validRoles = ['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK'];
+      const validRoles = ['ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK'];
+      if (req.user.role === 'SUPER_ADMIN') {
+        validRoles.push('SUPER_ADMIN');
+      }
       if (!validRoles.includes(role)) {
         return res.status(400).json({ message: 'Invalid role' });
       }
@@ -102,6 +105,26 @@ const getUsers = async (req, res) => {
     const existingUser = await prisma.user.findFirst({ where: { email: cleanEmail } });
     if (existingUser) {
       return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Enforce Plan Limits
+    if (companyId) {
+      const company = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: { plan: true }
+      });
+      if (company && company.plan) {
+        const planName = company.plan.toLowerCase();
+        if (planName === 'basic' || planName === 'advanced') {
+          const userCount = await prisma.user.count({ where: { companyId } });
+          if (planName === 'basic' && userCount >= 10) {
+            return res.status(403).json({ message: 'User limit reached for Basic plan (Max 10 users). Please upgrade to Advanced or Customized.' });
+          }
+          if (planName === 'advanced' && userCount >= 50) {
+            return res.status(403).json({ message: 'User limit reached for Advanced plan (Max 50 users). Please contact support to upgrade to Customized.' });
+          }
+        }
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password || 'nexus123', 10);
@@ -170,7 +193,7 @@ const updateUser = async (req, res) => {
       updateData.password = await bcrypt.hash(password, 10);
     }
     
-    if (req.user.role === 'SUPER_ADMIN' && companyId !== undefined) {
+    if (req.user.role === 'ADMIN' && companyId !== undefined) {
       updateData.companyId = companyId || null;
     }
 

@@ -21,16 +21,16 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
-      name: 'Super Admin',
+      name: 'Admin',
       email: 'admin@test.com',
       password: hashedPassword,
-      role: 'SUPER_ADMIN',
+      role: 'ADMIN',
       companyId: company.id,
       status: 'ACTIVE'
     }
   });
 
-  console.log('Created Super Admin: admin@test.com / admin123');
+  console.log('Created Admin: admin@test.com / admin123');
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

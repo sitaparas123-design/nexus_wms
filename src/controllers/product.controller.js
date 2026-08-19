@@ -29,7 +29,9 @@ exports.getProductById = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { items, meta } = await productService.getProducts(req.user.companyId, req.query);
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const { items, meta } = await productService.getProducts(filterCompanyId, req.query);
     return paginatedResponse(res, items, meta, 'Products retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);

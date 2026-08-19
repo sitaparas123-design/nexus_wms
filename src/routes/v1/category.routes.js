@@ -5,10 +5,10 @@ const { verifyToken, requireRole } = require('../../middlewares/auth');
 
 router.use(verifyToken);
 
-router.post('/', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), categoryController.createCategory);
+router.post('/', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), categoryController.createCategory);
 router.get('/', categoryController.getCategories);
 router.get('/:id', categoryController.getCategoryById);
-router.put('/:id', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), categoryController.updateCategory);
-router.delete('/:id', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), categoryController.deleteCategory);
+router.put('/:id', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), categoryController.updateCategory);
+router.delete('/:id', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), categoryController.deleteCategory);
 
 module.exports = router;

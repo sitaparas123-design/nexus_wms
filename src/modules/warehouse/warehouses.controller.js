@@ -2,8 +2,9 @@ const prisma = require('../../utils/prisma');
 
 const getWarehouses = async (req, res) => {
   try {
-    const { companyId } = req.user;
-    const where = companyId ? { companyId } : {};
+    const { companyId, role } = req.user;
+    // ADMIN can see all warehouses. Others see only their own company's.
+    const where = (role === 'ADMIN' || !companyId) ? {} : { companyId };
     const warehouses = await prisma.warehouse.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -53,8 +54,8 @@ const getWarehouses = async (req, res) => {
 
   const createWarehouse = async (req, res) => {
   try {
-    let companyId = req.user.role === 'SUPER_ADMIN' && req.body.companyId ? req.body.companyId : req.user.companyId;
-    let managerId = req.user.role === 'SUPER_ADMIN' && req.body.managerId ? req.body.managerId : req.user.id;
+    let companyId = req.user.role === 'ADMIN' && req.body.companyId ? req.body.companyId : req.user.companyId;
+    let managerId = req.user.role === 'ADMIN' && req.body.managerId ? req.body.managerId : req.user.id;
     const { name, code, address, city, state, country, zipCode, contactPhone, capacityType, capacityValue, facilityType, supportedItems } = req.body;
 
     if (!name) {
@@ -132,7 +133,7 @@ const getWarehouses = async (req, res) => {
     let updateData = {
       name, code, facilityType, capacityType, capacityValue, supportedItems, contactPhone, address, city, state, country, zipCode
     };
-    if (req.user.role === 'SUPER_ADMIN' && req.body.managerId) {
+    if (req.user.role === 'ADMIN' && req.body.managerId) {
       updateData.managerId = req.body.managerId;
     }
 

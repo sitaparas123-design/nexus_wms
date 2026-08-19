@@ -12,7 +12,9 @@ exports.createTransfer = async (req, res) => {
 
 exports.getTransfers = async (req, res) => {
   try {
-    const { items, meta } = await transferService.getTransfers(req.user.companyId, req.query);
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const { items, meta } = await transferService.getTransfers(filterCompanyId, req.query);
     return paginatedResponse(res, items, meta, 'Inventory transfer history retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);
@@ -21,7 +23,9 @@ exports.getTransfers = async (req, res) => {
 
 exports.getTransferById = async (req, res) => {
   try {
-    const transfer = await transferService.getTransferById(req.params.id, req.user.companyId);
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const transfer = await transferService.getTransferById(req.params.id, filterCompanyId);
     return successResponse(res, transfer, 'Transfer details retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 404);

@@ -3,8 +3,14 @@ const NotificationService = require('../../utils/notification.service');
 
 const getSalesOrders = async (req, res) => {
   try {
-    const { companyId } = req.user;
-    const where = companyId ? { companyId } : {};
+    const { companyId, role, id: userId } = req.user;
+    
+    let where = {};
+    if (role === 'CLIENT') {
+      where.clientId = userId;
+    } else if (role !== 'ADMIN' && companyId) {
+      where.companyId = companyId;
+    }
     const orders = await prisma.salesOrder.findMany({
       where,
       include: {
@@ -197,7 +203,11 @@ const rejectSalesOrder = async (req, res) => {
 
 const createSalesOrder = async (req, res) => {
   try {
-    const { clientId, priority, items, shippingAddress, poNumber, notes } = req.body;
+    let { clientId, priority, items, shippingAddress, poNumber, notes } = req.body;
+
+    if (req.user.role === 'CLIENT') {
+      clientId = req.user.id;
+    }
 
     if (!clientId || !items || items.length === 0) {
       return res.status(400).json({ message: 'Client ID and items are required' });

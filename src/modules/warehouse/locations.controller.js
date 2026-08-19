@@ -2,10 +2,11 @@ const prisma = require('../../utils/prisma');
 
 const getLocations = async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
     
     const locations = await prisma.location.findMany({
-      where: { companyId },
+      where: filterCompanyId ? { companyId: filterCompanyId } : {},
       include: {
         locationInventories: {
           where: { quantity: { gt: 0 } },
