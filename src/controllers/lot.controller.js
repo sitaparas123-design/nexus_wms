@@ -3,7 +3,14 @@ const { successResponse, errorResponse, paginatedResponse } = require('../utils/
 
 exports.createLot = async (req, res) => {
   try {
-    const lot = await lotService.createLot(req.user.companyId, req.body);
+    let companyId = req.user.companyId || req.user.originalCompanyId;
+    if (!companyId) {
+      const prisma = require('../utils/prisma');
+      const defaultCompany = await prisma.company.findFirst();
+      if (!defaultCompany) throw new Error('No company found in database');
+      companyId = defaultCompany.id;
+    }
+    const lot = await lotService.createLot(companyId, req.body);
     return successResponse(res, lot, 'Lot/Batch created successfully', 201);
   } catch (error) {
     return errorResponse(res, error.message, 400);

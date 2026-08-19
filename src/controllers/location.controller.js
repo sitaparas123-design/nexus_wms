@@ -3,7 +3,14 @@ const { successResponse, errorResponse, paginatedResponse } = require('../utils/
 
 exports.createLocation = async (req, res) => {
   try {
-    const location = await locationService.createLocation(req.user.companyId, req.body);
+    let companyId = req.user.companyId || req.user.originalCompanyId;
+    if (!companyId) {
+      const prisma = require('../utils/prisma');
+      const defaultCompany = await prisma.company.findFirst();
+      if (!defaultCompany) throw new Error('No company found in database');
+      companyId = defaultCompany.id;
+    }
+    const location = await locationService.createLocation(companyId, req.body);
     return successResponse(res, location, 'Storage bin location created successfully', 201);
   } catch (error) {
     return errorResponse(res, error.message, 400);

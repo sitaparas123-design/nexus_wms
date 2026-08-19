@@ -42,7 +42,7 @@ const getClients = async (req, res) => {
         address,
         shippingAddress,
         gstNumber,
-        warehouseId,
+        warehouseId: warehouseId || null,
         password: hashedPassword,
         status,
         companyId: finalCompanyId,
@@ -63,7 +63,7 @@ const getClients = async (req, res) => {
 const updateClient = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, creditLimit, tier, email, phone, address, status, companyId } = req.body;
+    const { name, creditLimit, tier, email, phone, address, status, companyId, warehouseId } = req.body;
 
     const existingClient = await prisma.client.findUnique({ where: { id } });
     if (!existingClient) {
@@ -84,6 +84,7 @@ const updateClient = async (req, res) => {
       ...(status ? { status } : {}),
       ...(creditLimit !== undefined ? { creditLimit: parseFloat(creditLimit) } : {}),
       ...(tier ? { tier } : {}),
+      ...(warehouseId !== undefined ? { warehouseId: warehouseId || null } : {}),
       updatedAt: new Date(),
     };
 

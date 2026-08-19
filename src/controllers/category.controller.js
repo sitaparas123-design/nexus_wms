@@ -3,7 +3,18 @@ const { successResponse, errorResponse, paginatedResponse } = require('../utils/
 
 exports.createCategory = async (req, res) => {
   try {
-    const category = await categoryService.createCategory(req.user.companyId, req.body);
+    let companyId = req.user.companyId || req.user.originalCompanyId;
+    if (req.user.role === 'SUPER_ADMIN' && req.body.companyId) {
+      companyId = req.body.companyId;
+    }
+    
+    if (!companyId) {
+      const prisma = require('../utils/prisma');
+      const defaultCompany = await prisma.company.findFirst();
+      if (!defaultCompany) throw new Error('No company found in database');
+      companyId = defaultCompany.id;
+    }
+    const category = await categoryService.createCategory(companyId, req.body);
     return successResponse(res, category, 'Category created successfully', 201);
   } catch (error) {
     return errorResponse(res, error.message, 400);
@@ -21,7 +32,11 @@ exports.getCategoryById = async (req, res) => {
 
 exports.getCategories = async (req, res) => {
   try {
-    const { items, meta } = await categoryService.getCategories(req.user.companyId, req.query);
+    let companyId = req.user.companyId;
+    if (req.user.role === 'SUPER_ADMIN' && req.query.companyId) {
+      companyId = req.query.companyId === 'ALL' ? undefined : req.query.companyId;
+    }
+    const { items, meta } = await categoryService.getCategories(companyId, req.query);
     return paginatedResponse(res, items, meta, 'Categories retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);

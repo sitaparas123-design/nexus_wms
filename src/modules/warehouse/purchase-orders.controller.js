@@ -185,8 +185,13 @@ const deletePurchaseOrder = async (req, res) => {
     const { id } = req.params;
     const companyId = req.user.companyId;
 
+    const whereClause = { id };
+    if (companyId) {
+      whereClause.companyId = companyId;
+    }
+
     const order = await prisma.purchaseOrder.findFirst({
-      where: { id, companyId }
+      where: whereClause
     });
 
     if (!order) {
@@ -220,7 +225,7 @@ const deletePurchaseOrder = async (req, res) => {
     res.json({ message: 'Purchase order deleted successfully' });
   } catch (error) {
     console.error('Delete PO Error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: error.message || 'Internal server error', stack: error.stack });
   }
 };
 

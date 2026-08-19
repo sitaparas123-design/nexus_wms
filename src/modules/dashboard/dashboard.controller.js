@@ -71,7 +71,6 @@ exports.getSuperAdminDashboard = async (req, res) => {
     let totalCapacity = locations.reduce((sum, l) => sum + (l.maxCapacity || 0), 0);
     if (totalCapacity === 0) {
       totalCapacity = warehouses.reduce((sum, w) => sum + (w.capacityValue || 0), 0);
-      if (totalCapacity === 0) totalCapacity = 25000;
     }
 
     let occupiedCapacity = locations.reduce((sum, loc) => {

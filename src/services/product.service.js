@@ -152,14 +152,17 @@ class ProductService {
     };
   }
 
-  async getProducts(companyId, query) {
+  async getProducts(companyId, query, originalCompanyId) {
     const { page, limit, skip, sortBy, sortOrder } = getPaginationParams(query);
     const categoryId = query.categoryId || null;
     const status = query.status || null;
     const search = query.search || null;
+    const scope = query.scope || null;
+    const clientCompanyId = query.clientCompanyId || null;
 
     const { items, total } = await productRepository.findAll({
       companyId,
+      originalCompanyId,
       categoryId,
       status,
       search,
@@ -167,6 +170,8 @@ class ProductService {
       limit,
       sortBy,
       sortOrder,
+      scope,
+      clientCompanyId
     });
 
     const enrichedItems = items.map((prod) => {
@@ -219,7 +224,7 @@ class ProductService {
       name: p.name || 'Unnamed Product',
       barcode: p.barcode || null,
       status: p.status || 'ACTIVE',
-      companyId: companyId,
+      companyId: p.companyId || companyId,
       unitCost: 0.0,
       wholesalePrice: 0.0,
       uom: 'Piece',

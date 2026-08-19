@@ -8,5 +8,7 @@ router.use(verifyToken, requireRole(['CLIENT', 'ADMIN', 'WAREHOUSE_MANAGER']));
 
 router.get('/sales-orders', salesOrdersController.getSalesOrders);
 router.post('/sales-orders', salesOrdersController.createSalesOrder);
+router.put('/sales-orders/:id/cancel', salesOrdersController.cancelSalesOrder);
+router.delete('/sales-orders/:id', salesOrdersController.deleteSalesOrder);
 
 module.exports = router;

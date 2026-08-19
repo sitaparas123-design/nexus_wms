@@ -23,5 +23,6 @@ router.use('/reports', require('./reports.routes'));
 router.use('/locations', require('./locations.routes'));
 router.use('/warehouses', require('./warehouses.routes'));
 router.use('/', require('./clients.routes'));
+router.use('/', require('./invoices.routes'));
 
 module.exports = router;

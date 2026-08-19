@@ -263,9 +263,45 @@ const generateShippingLabel = async (req, res) => {
       }
 
       // Update SalesOrder status to SHIPPED
-      const salesOrder = await tx.salesOrder.findUnique({ where: { id: orderId } });
+      const salesOrder = await tx.salesOrder.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { product: true } } }
+      });
       if (salesOrder) {
         await tx.salesOrder.update({ where: { id: orderId }, data: { status: 'SHIPPED' } });
+
+        // Auto-Generate Invoice
+        const currentYear = new Date().getFullYear();
+        const invoiceCount = await tx.invoice.count({
+          where: {
+            createdAt: {
+              gte: new Date(`${currentYear}-01-01`),
+              lt: new Date(`${currentYear + 1}-01-01`)
+            }
+          }
+        });
+        const seqNo = String(invoiceCount + 1).padStart(4, '0');
+        const invoiceNo = `INV-${currentYear}-${seqNo}`;
+
+        const invoiceItems = salesOrder.items.map(item => ({
+          productId: item.productId,
+          name: item.product?.name || 'Unknown Product',
+          quantity: item.quantity,
+          unitPrice: item.product?.wholesalePrice || 0,
+          total: (item.product?.wholesalePrice || 0) * item.quantity
+        }));
+
+        await tx.invoice.create({
+          data: {
+            invoiceNo,
+            orderId: salesOrder.id,
+            clientId: salesOrder.clientId,
+            companyId: salesOrder.companyId,
+            items: invoiceItems,
+            totalAmount: salesOrder.totalCost,
+            status: 'UNPAID'
+          }
+        });
       }
 
       return newShipment;

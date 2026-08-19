@@ -23,9 +23,24 @@ class ProductRepository {
     });
   }
 
-  async findAll({ companyId, categoryId, status, search, skip, limit, sortBy, sortOrder }) {
+  async findAll({ companyId, originalCompanyId, categoryId, status, search, skip, limit, sortBy, sortOrder, scope, clientCompanyId }) {
+    let compFilter = companyId ? { companyId } : {};
+
+    // For SUPER_ADMIN where companyId is null, but they have originalCompanyId, we can filter based on scope
+    if (!companyId && originalCompanyId && scope) {
+      if (scope === 'OWN') {
+        compFilter = { companyId: originalCompanyId };
+      } else if (scope === 'OTHER') {
+        compFilter = clientCompanyId ? { companyId: clientCompanyId } : { companyId: { not: originalCompanyId } };
+      }
+    } else if (companyId && scope) {
+       if (scope === 'OTHER') {
+         compFilter = clientCompanyId ? { companyId: clientCompanyId } : { companyId: { not: companyId } };
+       }
+    }
+
     const where = {
-      ...(companyId ? { companyId } : {}),
+      ...compFilter,
       deletedAt: null,
       ...(categoryId ? { categoryId } : {}),
       ...(status ? { status } : {}),
@@ -66,7 +81,7 @@ class ProductRepository {
 
   async softDelete(id, companyId) {
     return await prisma.product.updateMany({
-      where: { id, companyId },
+      where: { id, ...(companyId ? { companyId } : {}) },
       data: { deletedAt: new Date() },
     });
   }

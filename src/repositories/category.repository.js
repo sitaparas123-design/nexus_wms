@@ -8,7 +8,7 @@ class CategoryRepository {
   async findById(id, companyId) {
     return await prisma.category.findFirst({
       where: { id, ...(companyId ? { companyId } : {}), deletedAt: null },
-      include: { _count: { select: { products: true } } },
+      include: { _count: { select: { products: true } }, company: { select: { id: true, name: true } } },
     });
   }
 
@@ -32,7 +32,7 @@ class CategoryRepository {
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
-        include: { _count: { select: { products: true } } },
+        include: { _count: { select: { products: true } }, company: { select: { id: true, name: true } } },
       }),
       prisma.category.count({ where }),
     ]);
@@ -49,7 +49,7 @@ class CategoryRepository {
 
   async softDelete(id, companyId) {
     return await prisma.category.updateMany({
-      where: { id, companyId },
+      where: { id, ...(companyId ? { companyId } : {}) },
       data: { deletedAt: new Date() },
     });
   }
