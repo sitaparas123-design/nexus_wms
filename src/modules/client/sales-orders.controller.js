@@ -99,4 +99,44 @@ const createSalesOrder = async (req, res) => {
   }
 };
 
-module.exports = { getSalesOrders, createSalesOrder };
+const cancelSalesOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await prisma.salesOrder.findFirst({
+      where: { id, ...(req.user.companyId ? { companyId: req.user.companyId } : {}) }
+    });
+    
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    
+    await prisma.salesOrder.update({
+      where: { id },
+      data: { status: 'CANCELLED' }
+    });
+    
+    res.json({ message: 'Order cancelled successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const deleteSalesOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await prisma.salesOrder.findFirst({
+      where: { id, ...(req.user.companyId ? { companyId: req.user.companyId } : {}) }
+    });
+    
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    
+    await prisma.salesOrderItem.deleteMany({ where: { salesOrderId: id } });
+    await prisma.salesOrder.delete({ where: { id } });
+    
+    res.json({ message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = { getSalesOrders, createSalesOrder, cancelSalesOrder, deleteSalesOrder };
