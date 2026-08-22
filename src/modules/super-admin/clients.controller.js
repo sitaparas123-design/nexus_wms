@@ -5,7 +5,7 @@ const { logAudit } = require('../../utils/auditLogger');
 const getClients = async (req, res) => {
   try {
     const where = {};
-    if (req.user && req.user.role !== 'SUPER_ADMIN' && req.user.companyId) {
+    if (req.user && req.user.role !== 'ADMIN' && req.user.companyId) {
       where.companyId = req.user.companyId;
     }
     const clients = await prisma.client.findMany({
@@ -88,7 +88,7 @@ const updateClient = async (req, res) => {
       updatedAt: new Date(),
     };
 
-    if (req.user && req.user.role === 'SUPER_ADMIN' && companyId !== undefined) {
+    if (req.user && req.user.role === 'ADMIN' && companyId !== undefined) {
       updateData.companyId = companyId || null;
     }
 

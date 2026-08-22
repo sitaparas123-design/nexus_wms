@@ -4,18 +4,13 @@ const NotificationService = require('../../utils/notification.service');
 const getSalesOrders = async (req, res) => {
   try {
     const { companyId, role, id: userId } = req.user;
-    const where = companyId ? { companyId } : {};
-
-    // CLIENT role: only see their own orders
+    
+    let where = {};
     if (role === 'CLIENT') {
       where.clientId = userId;
+    } else if (role !== 'ADMIN' && companyId) {
+      where.companyId = companyId;
     }
-
-    // Optional clientId query param filter (from my-orders page)
-    if (req.query.clientId && role === 'CLIENT') {
-      where.clientId = req.query.clientId;
-    }
-
     const orders = await prisma.salesOrder.findMany({
       where,
       include: {

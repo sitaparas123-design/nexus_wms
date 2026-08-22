@@ -6,6 +6,6 @@ const { verifyToken, requireRole } = require('../../middlewares/auth');
 router.use(verifyToken);
 
 router.get('/', settingsController.getSettings);
-router.put('/', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), settingsController.updateSettings);
+router.put('/', requireRole(['SUPER_ADMIN', 'ADMIN', 'WAREHOUSE_MANAGER']), settingsController.updateSettings);
 
 module.exports = router;

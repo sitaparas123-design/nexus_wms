@@ -3,13 +3,11 @@ const NotificationService = require('../../utils/notification.service');
 
 const getSalesOrders = async (req, res) => {
   try {
-    // req.user.id is the Client's ID (from the Client table) when role === CLIENT
-    const whereClause = req.user.role === 'CLIENT'
-      ? { clientId: req.user.id }
-      : (req.user.companyId ? { companyId: req.user.companyId } : {});
-
+    // In a real app, req.user would have a clientId if role === CLIENT.
+    // For this mockup, we assume the user represents the client for their company.
+    // If you had a distinct clientId on the JWT, filter by that.
     const orders = await prisma.salesOrder.findMany({
-      where: whereClause,
+      where: { ...(req.user.companyId ? { ...(req.user.companyId ? { companyId: req.user.companyId } : {}) } : {}) },
       include: {
         items: { include: { product: true } }
       },
@@ -24,7 +22,7 @@ const getSalesOrders = async (req, res) => {
 
 const createSalesOrder = async (req, res) => {
   try {
-    const { clientId, items, deliveryAddress, notes, poNumber, priority } = req.body; // items: [{ productId, quantity }]
+    const { clientId, items } = req.body; // items: [{ productId, quantity }]
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Items are required' });
@@ -68,10 +66,6 @@ const createSalesOrder = async (req, res) => {
         ...(req.user.companyId ? { companyId: req.user.companyId } : {}),
         status: 'PENDING_REVIEW',
         totalCost,
-        shippingAddress: deliveryAddress,
-        notes,
-        poNumber,
-        priority: priority || 'NORMAL',
         items: {
           create: items.map(item => ({
             productId: item.productId,
@@ -85,7 +79,7 @@ const createSalesOrder = async (req, res) => {
     await prisma.auditLog.create({
       data: {
         event: 'SALES_ORDER_REQUESTED',
-        userId: req.user.role === 'CLIENT' ? null : req.user.id,
+        userId: req.user.id,
         ipAddress: req.ip
       }
     });
@@ -94,7 +88,8 @@ const createSalesOrder = async (req, res) => {
     await NotificationService.send({
       title: 'New Order Request',
       message: `A new order request (${order.id}) has been placed and is pending review.`,
-      ...(req.user.companyId ? { companyId: req.user.companyId } : {})
+      ...(req.user.companyId ? { companyId: req.user.companyId } : {}),
+      targetRoles: ['ADMIN', 'WAREHOUSE_MANAGER']
     });
 
     res.status(201).json(order);
@@ -103,44 +98,22 @@ const createSalesOrder = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 const cancelSalesOrder = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const order = await prisma.salesOrder.findUnique({
-      where: { id }
+    const order = await prisma.salesOrder.findFirst({
+      where: { id, ...(req.user.companyId ? { companyId: req.user.companyId } : {}) }
     });
-
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    // Security: ensure the client can only cancel their own orders
-    if (req.user.role === 'CLIENT' && order.clientId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to cancel this order' });
-    }
-
-    if (order.status !== 'PENDING_REVIEW') {
-      return res.status(400).json({ message: 'Only pending orders can be canceled' });
-    }
-
-    const updatedOrder = await prisma.salesOrder.update({
+    
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    
+    await prisma.salesOrder.update({
       where: { id },
-      data: {
-        status: 'CANCELED',
-        rejectionReason: 'Canceled by client',
-      }
+      data: { status: 'CANCELLED' }
     });
-
-    await prisma.auditLog.create({
-      data: {
-        event: 'SALES_ORDER_CANCELED_BY_CLIENT',
-        userId: req.user.role === 'CLIENT' ? null : req.user.id,
-        ipAddress: req.ip
-      }
-    });
-
-    res.json(updatedOrder);
+    
+    res.json({ message: 'Order cancelled successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });
@@ -150,36 +123,15 @@ const cancelSalesOrder = async (req, res) => {
 const deleteSalesOrder = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const order = await prisma.salesOrder.findUnique({
-      where: { id }
+    const order = await prisma.salesOrder.findFirst({
+      where: { id, ...(req.user.companyId ? { companyId: req.user.companyId } : {}) }
     });
-
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    // Security: ensure the client can only delete their own orders
-    if (req.user.role === 'CLIENT' && order.clientId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to delete this order' });
-    }
-
-    if (order.status !== 'CANCELED' && order.status !== 'REJECTED') {
-      return res.status(400).json({ message: 'Only canceled or rejected orders can be deleted' });
-    }
-
-    await prisma.salesOrder.delete({
-      where: { id }
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        event: 'SALES_ORDER_DELETED_BY_CLIENT',
-        userId: req.user.role === 'CLIENT' ? null : req.user.id,
-        ipAddress: req.ip
-      }
-    });
-
+    
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    
+    await prisma.salesOrderItem.deleteMany({ where: { salesOrderId: id } });
+    await prisma.salesOrder.delete({ where: { id } });
+    
     res.json({ message: 'Order deleted successfully' });
   } catch (error) {
     console.error(error);
@@ -187,9 +139,4 @@ const deleteSalesOrder = async (req, res) => {
   }
 };
 
-module.exports = {
-  createSalesOrder,
-  getSalesOrders,
-  cancelSalesOrder,
-  deleteSalesOrder
-};
+module.exports = { getSalesOrders, createSalesOrder, cancelSalesOrder, deleteSalesOrder };

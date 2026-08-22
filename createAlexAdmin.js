@@ -21,7 +21,7 @@ async function main() {
     // Update password just in case
     await prisma.user.update({
       where: { email },
-      data: { password: hashedPassword, role: 'SUPER_ADMIN', status: 'ACTIVE' }
+      data: { password: hashedPassword, role: 'ADMIN', status: 'ACTIVE' }
     });
     console.log(`Updated password for ${email}`);
     return;
@@ -29,16 +29,16 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
-      name: 'Alex Super Admin',
+      name: 'Alex Admin',
       email: email,
       password: hashedPassword,
-      role: 'SUPER_ADMIN',
+      role: 'ADMIN',
       companyId: company.id,
       status: 'ACTIVE'
     }
   });
 
-  console.log(`Created Super Admin: ${email} / 123456`);
+  console.log(`Created Admin: ${email} / 123456`);
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

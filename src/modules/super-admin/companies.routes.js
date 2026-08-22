@@ -9,5 +9,8 @@ router.get('/', companiesController.getCompanies);
 router.post('/', companiesController.createCompany);
 router.put('/:id', companiesController.updateCompany);
 router.delete('/:id', companiesController.deleteCompany);
+router.put('/:id/status', companiesController.toggleCompanyStatus);
+router.put('/:id/extend-trial', companiesController.extendTrial);
+router.post('/:id/reset-password', companiesController.resetAdminPassword);
 
 module.exports = router;

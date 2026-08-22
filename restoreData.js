@@ -37,7 +37,7 @@ async function main() {
     {
       name: 'Alex Morgan',
       email: 'alex@stitchnexus.com',
-      role: 'SUPER_ADMIN',
+      role: 'ADMIN',
     },
     {
       name: 'Jordan Lee',

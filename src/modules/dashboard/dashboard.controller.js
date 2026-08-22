@@ -1,6 +1,6 @@
 const prisma = require('../../utils/prisma');
 
-// SUPER_ADMIN Dashboard
+// ADMIN Dashboard
 exports.getSuperAdminDashboard = async (req, res) => {
   try {
     const activeCompanies = await prisma.company.count();
@@ -133,7 +133,7 @@ exports.getSuperAdminDashboard = async (req, res) => {
       companiesList
     });
   } catch (error) {
-    console.error('Super Admin Dashboard Error:', error);
+    console.error('Admin Dashboard Error:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch super admin dashboard data.' });
   }
 };
@@ -339,17 +339,19 @@ exports.getClientDashboard = async (req, res) => {
   try {
     const companyId = req.user?.companyId;
     const clientId = req.user?.id;
-    const whereCompany = companyId ? { companyId } : (clientId ? { clientId } : {});
+    
+    const whereOrder = { clientId };
+    const whereBatch = companyId ? { companyId } : {};
 
     const activeOrders = await prisma.salesOrder.count({
       where: {
-        ...whereCompany,
+        ...whereOrder,
         status: { notIn: ['DELIVERED', 'CANCELLED', 'REJECTED'] }
       }
     });
 
     const allOrdersRaw = await prisma.salesOrder.findMany({
-      where: whereCompany,
+      where: whereOrder,
       include: { items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' }
     });
@@ -375,7 +377,7 @@ exports.getClientDashboard = async (req, res) => {
     // Fetch actual pending COAs
     const coasPending = await prisma.batch.count({
       where: {
-        ...whereCompany,
+        ...whereBatch,
         coaLocked: true
       }
     });

@@ -2,8 +2,8 @@ const prisma = require('../../utils/prisma');
 
 const getManagerSummary = async (req, res) => {
   try {
-    const companyId = req.user?.companyId;
-    const whereCompany = companyId ? { companyId } : {};
+    const { companyId, role } = req.user;
+    const whereCompany = (role === 'ADMIN' || !companyId) ? {} : { companyId };
 
     // 1. Pending Sales Orders
     const pendingSalesOrders = await prisma.salesOrder.count({
@@ -106,8 +106,9 @@ const getManagerSummary = async (req, res) => {
 
 const getClerkDashboard = async (req, res) => {
   try {
-    const companyId = req.user?.companyId;
-    const whereCompany = companyId ? { companyId } : {};
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const whereCompany = filterCompanyId ? { companyId: filterCompanyId } : {};
 
     const totalSkus = await prisma.product.count({ where: whereCompany });
     

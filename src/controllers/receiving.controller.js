@@ -1,16 +1,19 @@
 const receivingService = require('../services/receiving.service');
+const NotificationService = require('../utils/notification.service');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/responseHandler');
 
 exports.createReceiving = async (req, res) => {
   try {
-    let companyId = req.user.companyId || req.user.originalCompanyId;
-    if (!companyId) {
-      const prisma = require('../utils/prisma');
-      const defaultCompany = await prisma.company.findFirst();
-      if (!defaultCompany) throw new Error('No company found in database');
-      companyId = defaultCompany.id;
-    }
-    const receiving = await receivingService.createReceiving(companyId, req.user.id, req.body);
+    const receiving = await receivingService.createReceiving(req.user.companyId, req.user.id, req.body);
+    
+    // Notify about new receiving creation
+    await NotificationService.send({
+      companyId: req.user.companyId,
+      title: 'New Inbound Delivery',
+      message: `Receiving order ${receiving.receivingNumber || receiving.id.substring(0,8)} has been created.`,
+      targetRoles: ['ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']
+    }).catch(console.error);
+
     return successResponse(res, receiving, 'Receiving order created successfully', 201);
   } catch (error) {
     return errorResponse(res, error.message, 400);
@@ -19,7 +22,9 @@ exports.createReceiving = async (req, res) => {
 
 exports.getReceivings = async (req, res) => {
   try {
-    const { items, meta } = await receivingService.getReceivings(req.user.companyId, req.query);
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
+    const { items, meta } = await receivingService.getReceivings(filterCompanyId, req.query);
     return paginatedResponse(res, items, meta, 'Receiving orders retrieved successfully');
   } catch (error) {
     return errorResponse(res, error.message, 500);
@@ -47,6 +52,15 @@ exports.processInspection = async (req, res) => {
 exports.completeReceivingAndPutaway = async (req, res) => {
   try {
     const result = await receivingService.completeReceivingAndPutaway(req.params.id, req.user.companyId, req.user.id, req.body);
+    
+    // Notify about completion
+    await NotificationService.send({
+      companyId: req.user.companyId,
+      title: 'Inbound Delivery Completed',
+      message: `Items for receiving order have been inspected and putaway. Stock is now available.`,
+      targetRoles: ['ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']
+    }).catch(console.error);
+
     return successResponse(res, result, 'Receiving completed, lots created, and putaway performed successfully');
   } catch (error) {
     return errorResponse(res, error.message, 400);

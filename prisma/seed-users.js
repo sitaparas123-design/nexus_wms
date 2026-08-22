@@ -8,23 +8,33 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash('123456', 10);
 
-  // Check if company already exists
-  let company = await prisma.company.findFirst({
-    where: { name: 'Stitch Nexus Corp' },
+  let company;
+  const alexUser = await prisma.user.findUnique({
+    where: { email: 'alex@stitchnexus.com' },
+    include: { company: true }
   });
 
-  if (!company) {
-    company = await prisma.company.create({
-      data: { name: 'Stitch Nexus Corp', industry: 'Logistics' },
-    });
-    console.log('✅ Company created:', company.id);
+  if (alexUser && alexUser.company) {
+    company = alexUser.company;
+    console.log('ℹ️  Using Alex\\'s existing company:', company.id);
   } else {
-    console.log('ℹ️  Company already exists:', company.id);
+    company = await prisma.company.findFirst({
+      where: { name: 'Stitch Nexus Corp' },
+    });
+
+    if (!company) {
+      company = await prisma.company.create({
+        data: { name: 'Stitch Nexus Corp', industry: 'Logistics' },
+      });
+      console.log('✅ Company created:', company.id);
+    } else {
+      console.log('ℹ️  Company already exists:', company.id);
+    }
   }
 
   // Upsert users
   const users = [
-    { name: 'Alex Morgan',    email: 'alex@stitchnexus.com',    role: 'SUPER_ADMIN' },
+    { name: 'Alex Morgan',    email: 'alex@stitchnexus.com',    role: 'ADMIN' },
     { name: 'Jordan Lee',     email: 'jordan@stitchnexus.com',  role: 'WAREHOUSE_MANAGER' },
     { name: 'Casey Rivera',   email: 'casey@stitchnexus.com',   role: 'INVENTORY_CLERK' },
     { name: 'Sam Wilson',     email: 'sam@acmecorp.com',        role: 'CLIENT' },
@@ -55,7 +65,7 @@ async function main() {
   }
 
   console.log('\n🎉 All done! Login with any of these:');
-  console.log('  alex@stitchnexus.com     | 123456  (SUPER_ADMIN)');
+  console.log('  alex@stitchnexus.com     | 123456  (ADMIN)');
   console.log('  jordan@stitchnexus.com   | 123456  (WAREHOUSE_MANAGER)');
   console.log('  casey@stitchnexus.com    | 123456  (INVENTORY_CLERK)');
   console.log('  sam@acmecorp.com         | 123456  (CLIENT)');

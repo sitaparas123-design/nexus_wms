@@ -14,7 +14,7 @@ const verifyToken = (req, res, next) => {
     // Save original company ID before overriding for global visibility
     req.user.originalCompanyId = decoded.companyId;
 
-    // Super Admins should have global visibility
+    // Super Admins should have global visibility across all tenants
     if (req.user.role === 'SUPER_ADMIN') {
       req.user.companyId = null;
     }

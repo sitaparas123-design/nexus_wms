@@ -1,7 +1,7 @@
 const prisma = require('../../utils/prisma');
 
 const defaultPermissions = {
-  SUPER_ADMIN: [
+  ADMIN: [
     'dashboard.view', 'dashboard.analytics',
     'products.view', 'products.create', 'products.edit', 'products.delete', 'products.import', 'products.export',
     'inventory.view', 'inventory.adjust', 'inventory.movements', 'inventory.export',
@@ -73,7 +73,7 @@ let activePermissionStore = { ...defaultPermissions };
 const getRoles = async (req, res) => {
   try {
     const rolesList = [
-      { key: 'SUPER_ADMIN', label: 'Super Admin', color: 'danger', permissions: activePermissionStore.SUPER_ADMIN || [] },
+      { key: 'ADMIN', label: 'Admin', color: 'danger', permissions: activePermissionStore.ADMIN || [] },
       { key: 'WAREHOUSE_MANAGER', label: 'Warehouse Manager', color: 'primary', permissions: activePermissionStore.WAREHOUSE_MANAGER || [] },
       { key: 'INVENTORY_CLERK', label: 'Inventory Clerk', color: 'warning', permissions: activePermissionStore.INVENTORY_CLERK || [] },
       { key: 'CLIENT', label: 'Client User', color: 'info', permissions: activePermissionStore.CLIENT || [] },

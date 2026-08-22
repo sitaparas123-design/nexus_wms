@@ -2,8 +2,10 @@ const prisma = require('../../utils/prisma');
 
 const getBatches = async (req, res) => {
   try {
+    const { companyId, role } = req.user;
+    const filterCompanyId = (role === 'ADMIN' || !companyId) ? undefined : companyId;
     const batches = await prisma.batch.findMany({
-      where: req.user.companyId ? { companyId: req.user.companyId } : {},
+      where: filterCompanyId ? { companyId: filterCompanyId } : {},
       include: { product: true },
       orderBy: { createdAt: 'desc' }
     });

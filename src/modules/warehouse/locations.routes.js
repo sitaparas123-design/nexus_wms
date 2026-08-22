@@ -4,8 +4,8 @@ const { getLocations, createLocation, updateLocation, deleteLocation } = require
 const { verifyToken, requireRole } = require('../../middlewares/auth');
 
 router.get('/', verifyToken, getLocations);
-router.post('/', verifyToken, requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), createLocation);
-router.put('/:id', verifyToken, requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), updateLocation);
-router.delete('/:id', verifyToken, requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), deleteLocation);
+router.post('/', verifyToken, requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), createLocation);
+router.put('/:id', verifyToken, requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), updateLocation);
+router.delete('/:id', verifyToken, requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), deleteLocation);
 
 module.exports = router;

@@ -4,6 +4,15 @@ const getCompanies = async (req, res) => {
   try {
     const companies = await prisma.company.findMany({
       orderBy: { createdAt: 'desc' },
+      include: {
+        payments: {
+          orderBy: { paymentDate: 'desc' },
+          take: 1
+        },
+        _count: {
+          select: { users: true, warehouses: true }
+        }
+      }
     });
     res.json(companies);
   } catch (error) {
@@ -83,7 +92,7 @@ const deleteCompany = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Prevent Super Admin from deleting their own company
+    // Prevent Admin from deleting their own company
     const userCompanyId = req.user.originalCompanyId || req.user.companyId;
     if (req.user && userCompanyId === id) {
       return res.status(403).json({ message: 'Action Denied: You cannot delete your own active company.' });
@@ -159,4 +168,59 @@ const deleteCompany = async (req, res) => {
   }
 };
 
-module.exports = { getCompanies, createCompany, updateCompany, deleteCompany };
+const toggleCompanyStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await prisma.company.findUnique({ where: { id } });
+    if (!company) return res.status(404).json({ message: 'Company not found' });
+    
+    const newStatus = !company.isActive;
+    await prisma.company.update({
+      where: { id },
+      data: { isActive: newStatus, status: newStatus ? 'ACTIVE' : 'BLOCKED' }
+    });
+    
+    res.json({ message: `Company ${newStatus ? 'activated' : 'blocked'} successfully` });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const extendTrial = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { days } = req.body;
+    
+    const company = await prisma.company.findUnique({ where: { id } });
+    if (!company) return res.status(404).json({ message: 'Company not found' });
+    
+    const newEndDate = company.trialEndDate ? new Date(company.trialEndDate) : new Date();
+    newEndDate.setDate(newEndDate.getDate() + (days || 7));
+    
+    await prisma.company.update({
+      where: { id },
+      data: { trialEndDate: newEndDate, isActive: true, status: 'ACTIVE' }
+    });
+    
+    res.json({ message: `Trial extended by ${days || 7} days.` });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const resetAdminPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminUser = await prisma.user.findFirst({ where: { companyId: id, role: 'ADMIN' } });
+    
+    if (!adminUser) return res.status(404).json({ message: 'Admin user not found for this company' });
+    
+    // In a real app, generate a reset token and send email.
+    // For now, we return a mock success message.
+    res.json({ message: `Password reset link sent to ${adminUser.email}` });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = { getCompanies, createCompany, updateCompany, deleteCompany, toggleCompanyStatus, extendTrial, resetAdminPassword };

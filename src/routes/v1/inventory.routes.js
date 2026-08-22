@@ -10,8 +10,8 @@ router.get('/summary', inventoryController.getInventorySummary);
 router.get('/transactions', inventoryController.getInventoryTransactions);
 
 // Allocation APIs exposed for Developer 1 (Order Fulfillment module)
-router.post('/reserve', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'CLIENT']), inventoryController.reserveStock);
-router.post('/release', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'CLIENT']), inventoryController.releaseStock);
-router.post('/fulfill', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']), inventoryController.fulfillOrderStock);
+router.post('/reserve', requireRole(['ADMIN', 'WAREHOUSE_MANAGER', 'CLIENT']), inventoryController.reserveStock);
+router.post('/release', requireRole(['ADMIN', 'WAREHOUSE_MANAGER', 'CLIENT']), inventoryController.releaseStock);
+router.post('/fulfill', requireRole(['ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']), inventoryController.fulfillOrderStock);
 
 module.exports = router;

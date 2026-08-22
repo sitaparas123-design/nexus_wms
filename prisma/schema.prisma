@@ -8,90 +8,98 @@ datasource db {
 }
 
 model Company {
-  id         String   @id @default(uuid())
-  name       String
-  clientCode String?
-  industry   String?
-  status     String   @default("ACTIVE")
-  email      String?
-  phone      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  users              User[]
-  categories         Category[]
-  products           Product[]
-  clients            Client[]
-  batches            Batch[]
-  locations          Location[]
-  locationInventory  LocationInventory[]
-  inventories        Inventory[]
-  receivings         Receiving[]
-  inventoryLedgers   InventoryLedger[]
-  transfersOut       TransferOrder[]     @relation("SourceCompany")
-  transfersIn        TransferOrder[]     @relation("DestCompany")
-  inventoryTransfers InventoryTransfer[]
-  stockAdjustments   StockAdjustment[]
-  expiryAlerts       ExpiryAlert[]
-  purchaseOrders     PurchaseOrder[]
-  pickLists          PickList[]
-  salesOrders        SalesOrder[]
-  notifications      Notification[]
-  shipments          Shipment[]
-  warehouses         Warehouse[]
-  invoices           Invoice[]
+  id                  String              @id @default(uuid())
+  name                String
+  industry            String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  clientCode          String?
+  email               String?
+  phone               String?
+  status              String              @default("ACTIVE")
+  isActive            Boolean             @default(true)
+  plan                String              @default("TRIAL")
+  trialEndDate        DateTime?
+  trialStartDate      DateTime?
+  emailLimitResetDate DateTime?
+  monthlyEmailsSent   Int                 @default(0)
+  batches             Batch[]
+  categories          Category[]
+  clients             Client[]
+  expiryAlerts        ExpiryAlert[]
+  inventories         Inventory[]
+  inventoryLedgers    InventoryLedger[]
+  inventoryTransfers  InventoryTransfer[]
+  locations           Location[]
+  locationInventory   LocationInventory[]
+  notifications       Notification[]
+  payments            Payment[]
+  pickLists           PickList[]
+  products            Product[]
+  purchaseOrders      PurchaseOrder[]
+  receivings          Receiving[]
+  salesOrders         SalesOrder[]
+  shipments           Shipment[]
+  stockAdjustments    StockAdjustment[]
+  supportTickets      SupportTicket[]
+  transfersIn         TransferOrder[]     @relation("DestCompany")
+  transfersOut        TransferOrder[]     @relation("SourceCompany")
+  users               User[]
+  warehouses          Warehouse[]
 
   @@map("company")
 }
 
 model User {
-  id          String   @id @default(uuid())
-  name        String
-  email       String   @unique
-  password    String
-  role        String // SUPER_ADMIN, WAREHOUSE_MANAGER, INVENTORY_CLERK, CLIENT
-  status      String   @default("ACTIVE")
-  phone       String?
-  jobTitle    String?
-  companyId   String?
-  warehouseId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  company            Company?            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse          Warehouse?          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  id                 String              @id @default(uuid())
+  name               String
+  email              String              @unique
+  password           String
+  role               String
+  status             String              @default("ACTIVE")
+  companyId          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  jobTitle           String?
+  phone              String?
+  warehouseId        String?
   auditLogs          AuditLog[]
+  createdTransfers   InventoryTransfer[] @relation("TransferCreatedUser")
   notifications      Notification[]
   receivings         Receiving[]         @relation("InspectorUser")
-  createdTransfers   InventoryTransfer[] @relation("TransferCreatedUser")
   createdAdjustments StockAdjustment[]   @relation("AdjustmentCreatedUser")
+  supportTickets     SupportTicket[]
+  company            Company?            @relation(fields: [companyId], references: [id])
+  warehouse          Warehouse?          @relation(fields: [warehouseId], references: [id])
   managedWarehouses  Warehouse[]         @relation("WarehouseManager")
 
+  @@index([companyId], map: "user_companyId_fkey")
+  @@index([warehouseId], map: "user_warehouseId_fkey")
   @@map("user")
 }
 
 model Client {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   name            String
-  creditLimit     Float    @default(0.0)
-  tier            String   @default("STANDARD")
+  creditLimit     Float        @default(0)
+  tier            String       @default("STANDARD")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  address         String?
   email           String?
   phone           String?
-  address         String?
-  shippingAddress String?
-  gstNumber       String?
-  status          String   @default("ACTIVE")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  status          String       @default("ACTIVE")
   companyId       String?
-  warehouseId     String?
+  gstNumber       String?
   password        String?
+  shippingAddress String?
+  warehouseId     String?
+  company         Company?     @relation(fields: [companyId], references: [id])
+  warehouse       Warehouse?   @relation(fields: [warehouseId], references: [id])
+  salesOrders     SalesOrder[]
 
-  company     Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse   Warehouse?   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  salesOrders SalesOrder[]
-  invoices    Invoice[]
-
+  @@index([companyId], map: "client_companyId_fkey")
+  @@index([warehouseId], map: "client_warehouseId_fkey")
   @@map("client")
 }
 
@@ -101,9 +109,9 @@ model AuditLog {
   userId    String?
   ipAddress String?
   timestamp DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  @@index([userId], map: "auditlog_userId_fkey")
   @@map("auditlog")
 }
 
@@ -125,241 +133,249 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
+  company     Company   @relation(fields: [companyId], references: [id])
+  products    Product[]
 
-  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  products Product[]
-
+  @@index([companyId], map: "category_companyId_fkey")
   @@map("category")
 }
 
-// Catalog-only Product model (stock is driven by LocationInventory & InventoryLedger)
 model Product {
-  id             String    @id @default(uuid())
-  sku            String
-  barcode        String?
-  name           String
-  description    String?
-  category       String? // Backward compatible string category
-  categoryId     String?
-  unitCost       Float     @default(0.0)
-  wholesalePrice Float     @default(0.0)
-  brand          String?
-  uom            String    @default("Piece")
-  storageType    String    @default("General Storage")
-  trackingMethod String    @default("None")
-  status         String    @default("ACTIVE")
-  availableStock Int       @default(0)
-  committedStock Int       @default(0)
-  companyId      String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-  attributes     Json?
-
-  company             Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  categoryRef         Category?             @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  inventory           InventoryLedger[]
-  batches             Batch[]
-  locationInventories LocationInventory[]
-  inventories         Inventory[]
+  id                  String                @id @default(uuid())
+  sku                 String
+  name                String
+  category            String?
+  unitCost            Float                 @default(0)
+  wholesalePrice      Float                 @default(0)
+  companyId           String
+  status              String                @default("ACTIVE")
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  barcode             String?
+  categoryId          String?
+  deletedAt           DateTime?
+  description         String?
+  availableStock      Int                   @default(0)
+  committedStock      Int                   @default(0)
+  brand               String?
+  storageType         String                @default("General Storage")
+  trackingMethod      String                @default("None")
+  uom                 String                @default("Piece")
+  attributes          String?               @db.LongText
   barcodes            Barcode[]
-  receivingItems      ReceivingItem[]
-  transferItems       TransferItem[]
-  stockAdjustments    StockAdjustment[]
+  batches             Batch[]
   expiryAlerts        ExpiryAlert[]
-  transferOrders      TransferOrder[]
+  inventories         Inventory[]
+  inventory           InventoryLedger[]
+  locationInventories LocationInventory[]
   pickListItems       PickListItem[]
-  salesOrderItems     SalesOrderItem[]
-  purchaseOrderItems  PurchaseOrderItem[]
+  categoryRef         Category?             @relation(fields: [categoryId], references: [id])
+  company             Company               @relation(fields: [companyId], references: [id])
   specification       ProductSpecification?
+  purchaseOrderItems  PurchaseOrderItem[]
+  receivingItems      ReceivingItem[]
+  salesOrderItems     SalesOrderItem[]
+  stockAdjustments    StockAdjustment[]
+  transferItems       TransferItem[]
+  transferOrders      TransferOrder[]
 
+  @@index([categoryId], map: "product_categoryId_fkey")
+  @@index([companyId], map: "product_companyId_fkey")
   @@map("product")
 }
 
 model ProductSpecification {
-  id        String @id @default(uuid())
-  productId String @unique
+  id        String  @id @default(uuid())
+  productId String  @unique
   weight    Float?
   length    Float?
   width     Float?
   height    Float?
   volume    Float?
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("productspecification")
 }
 
 model Receiving {
-  id              String   @id @default(uuid())
-  receivingNumber String   @unique
+  id              String          @id @default(uuid())
+  receivingNumber String          @unique
   poNumber        String?
   supplier        String
-  warehouse       String? // Associated Facility name
-  status          String   @default("PENDING") // PENDING, IN_INSPECTION, COMPLETED, REJECTED
-  receivedAt      DateTime @default(now())
+  status          String          @default("PENDING")
+  receivedAt      DateTime        @default(now())
   inspectorId     String?
   notes           String?
   companyId       String
   createdBy       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  warehouse       String?
+  company         Company         @relation(fields: [companyId], references: [id])
+  inspector       User?           @relation("InspectorUser", fields: [inspectorId], references: [id])
+  items           ReceivingItem[]
 
-  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  inspector User?           @relation("InspectorUser", fields: [inspectorId], references: [id], onDelete: Cascade)
-  items     ReceivingItem[]
-
+  @@index([companyId], map: "receiving_companyId_fkey")
+  @@index([inspectorId], map: "receiving_inspectorId_fkey")
   @@map("receiving")
 }
 
 model ReceivingItem {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   receivingId     String
   productId       String
   expectedQty     Int
-  receivedQty     Int      @default(0)
-  acceptedQty     Int      @default(0)
-  rejectedQty     Int      @default(0)
+  receivedQty     Int       @default(0)
+  acceptedQty     Int       @default(0)
+  rejectedQty     Int       @default(0)
   rejectionReason String?
   companyId       String
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
+  batches         Batch[]
+  product         Product   @relation(fields: [productId], references: [id])
+  receiving       Receiving @relation(fields: [receivingId], references: [id])
 
-  receiving Receiving @relation(fields: [receivingId], references: [id], onDelete: Cascade)
-  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  batches   Batch[]
-
+  @@index([productId], map: "receivingitem_productId_fkey")
+  @@index([receivingId], map: "receivingitem_receivingId_fkey")
   @@map("receivingitem")
 }
 
 model Batch {
-  id                String    @id @default(uuid())
-  lotNumber         String?
-  lotId             String?
-  productId         String
-  receivingItemId   String?
-  companyId         String
-  mfgDate           DateTime?
-  expiryDate        DateTime?
-  acceptedQty       Int       @default(0)
-  status            String    @default("QUARANTINE") // QUARANTINE, RELEASED, REJECTED, EXPIRED
-  quarantine        Boolean   @default(false)
-  coaLocked         Boolean   @default(true)
-  testCertificateId String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  product             Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  receivingItem       ReceivingItem?      @relation(fields: [receivingItemId], references: [id])
+  id                  String              @id @default(uuid())
+  lotId               String?
+  productId           String
+  companyId           String
+  mfgDate             DateTime?
+  expiryDate          DateTime?
+  quarantine          Boolean             @default(false)
+  coaLocked           Boolean             @default(true)
+  testCertificateId   String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  acceptedQty         Int                 @default(0)
+  lotNumber           String?
+  receivingItemId     String?
+  status              String              @default("QUARANTINE")
   barcodes            Barcode[]
-  locationInventories LocationInventory[]
-  inventoryLedgers    InventoryLedger[]
-  transferItems       TransferItem[]
-  stockAdjustments    StockAdjustment[]
+  company             Company             @relation(fields: [companyId], references: [id])
+  product             Product             @relation(fields: [productId], references: [id])
+  receivingItem       ReceivingItem?      @relation(fields: [receivingItemId], references: [id])
   expiryAlerts        ExpiryAlert[]
+  inventoryLedgers    InventoryLedger[]
+  locationInventories LocationInventory[]
   pickListItems       PickListItem[]
+  stockAdjustments    StockAdjustment[]
+  transferItems       TransferItem[]
 
+  @@index([companyId], map: "batch_companyId_fkey")
+  @@index([productId], map: "batch_productId_fkey")
+  @@index([receivingItemId], map: "batch_receivingItemId_fkey")
   @@map("batch")
 }
 
 model Barcode {
   id             String   @id @default(uuid())
   code           String   @unique
-  barcodeType    String   @default("CODE128") // CODE128, QR
+  barcodeType    String   @default("CODE128")
   productId      String
   batchId        String
-  trackingStatus String   @default("GENERATED")
   companyId      String
   createdAt      DateTime @default(now())
+  trackingStatus String   @default("GENERATED")
+  batch          Batch    @relation(fields: [batchId], references: [id])
+  product        Product  @relation(fields: [productId], references: [id])
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
-
+  @@index([batchId], map: "barcode_batchId_fkey")
+  @@index([productId], map: "barcode_productId_fkey")
   @@map("barcode")
 }
 
 model Location {
-  id           String    @id @default(uuid())
-  code         String?
-  name         String?
-  warehouse    String    @default("Main Warehouse")
-  zone         String
-  aisle        String
-  rack         String
-  shelf        String
-  bin          String    @default("A1")
-  capacityType String    @default("Items")
-  maxCapacity  Int       @default(1000)
-  occupied     Int       @default(0)
-  status       String    @default("Active")
-  companyId    String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
-
-  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  locationInventories LocationInventory[]
+  id                  String              @id @default(uuid())
+  zone                String
+  aisle               String
+  rack                String
+  shelf               String
+  maxCapacity         Int                 @default(1000)
+  occupied            Int                 @default(0)
+  status              String              @default("Active")
+  companyId           String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  bin                 String              @default("A1")
+  code                String?
+  deletedAt           DateTime?
+  name                String?
+  warehouse           String              @default("Main Warehouse")
+  capacityType        String              @default("Items")
   inventoryLedgers    InventoryLedger[]
-  sourceTransfers     InventoryTransfer[] @relation("SourceLocation")
   destTransfers       InventoryTransfer[] @relation("DestLocation")
+  sourceTransfers     InventoryTransfer[] @relation("SourceLocation")
+  company             Company             @relation(fields: [companyId], references: [id])
+  locationInventories LocationInventory[]
   stockAdjustments    StockAdjustment[]
 
+  @@index([companyId], map: "location_companyId_fkey")
   @@map("location")
 }
 
 model Warehouse {
-  id             String   @id @default(uuid())
-  name           String
-  code           String?
-  address        String?
-  city           String?
-  state          String?
-  country        String?
-  zipCode        String?
-  managerName    String?
-  managerId      String?
-  contactPhone   String?
-  capacityType   String? // Items, Kg, Pallets, CBM
-  capacityValue  Float?
-  facilityType   String? // e.g. "Cold Storage", "Hazardous", "General"
-  supportedItems String? // e.g. "Perishables, Pharmaceuticals"
-  companyId      String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id                  String              @id @default(uuid())
+  name                String
+  code                String?
+  address             String?
+  city                String?
+  state               String?
+  country             String?
+  zipCode             String?
+  managerName         String?
+  contactPhone        String?
+  facilityType        String?
+  supportedItems      String?
+  companyId           String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  capacityType        String?
+  capacityValue       Float?
+  managerId           String?
+  clients             Client[]
   locationInventories LocationInventory[]
   users               User[]
-  clients             Client[]
-  manager             User?               @relation("WarehouseManager", fields: [managerId], references: [id], onDelete: Cascade)
+  company             Company             @relation(fields: [companyId], references: [id])
+  manager             User?               @relation("WarehouseManager", fields: [managerId], references: [id])
 
+  @@index([companyId], map: "Warehouse_companyId_fkey")
+  @@index([managerId], map: "Warehouse_managerId_fkey")
   @@map("warehouse")
 }
 
 model LocationInventory {
-  id           String    @id @default(uuid())
+  id           String     @id @default(uuid())
   locationId   String
   productId    String
   lotId        String?
-  warehouseId  String?
-  quantity     Int       @default(0)
-  reserved     Int       @default(0)
-  available    Int       @default(0)
-  lotNumber    String?
-  batchNumber  String?
-  serialNumber String?
-  expiryDate   DateTime?
+  quantity     Int        @default(0)
   companyId    String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  location  Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  batch     Batch?     @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  available    Int        @default(0)
+  batchNumber  String?
+  expiryDate   DateTime?
+  lotNumber    String?
+  reserved     Int        @default(0)
+  serialNumber String?
+  warehouseId  String?
+  company      Company    @relation(fields: [companyId], references: [id])
+  location     Location   @relation(fields: [locationId], references: [id])
+  batch        Batch?     @relation(fields: [lotId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id])
+  warehouse    Warehouse? @relation(fields: [warehouseId], references: [id])
 
   @@unique([locationId, productId, lotId])
+  @@index([companyId], map: "locationinventory_companyId_fkey")
+  @@index([lotId], map: "locationinventory_lotId_fkey")
+  @@index([productId], map: "locationinventory_productId_fkey")
+  @@index([warehouseId], map: "locationinventory_warehouseId_fkey")
   @@map("locationinventory")
 }
 
@@ -371,70 +387,78 @@ model Inventory {
   reservedStock  Int      @default(0)
   availableStock Int      @default(0)
   updatedAt      DateTime @updatedAt
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company        Company  @relation(fields: [companyId], references: [id])
+  product        Product  @relation(fields: [productId], references: [id])
 
   @@unique([productId, companyId])
+  @@index([companyId], map: "inventory_companyId_fkey")
   @@map("inventory")
 }
 
 model InventoryLedger {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   productId        String
-  lotId            String?
   companyId        String
-  locationId       String?
-  sourceLocationId String?
-  destLocationId   String?
-  location         String? // Legacy string location fallback
-  quantityDelta    Int // Positive for IN, Negative for OUT
-  movementType     String // RECEIVE, TRANSFER, RETURN, ADJUSTMENT, PICK, SHIP
-  referenceId      String?
-  notes            String?
+  location         String?
+  quantityDelta    Int
+  movementType     String
+  timestamp        DateTime  @default(now())
   createdBy        String?
-  timestamp        DateTime @default(now())
+  destLocationId   String?
+  locationId       String?
+  lotId            String?
+  notes            String?
+  referenceId      String?
+  sourceLocationId String?
+  company          Company   @relation(fields: [companyId], references: [id])
+  locRef           Location? @relation(fields: [locationId], references: [id])
+  batch            Batch?    @relation(fields: [lotId], references: [id])
+  product          Product   @relation(fields: [productId], references: [id])
 
-  product Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  batch   Batch?    @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  company Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  locRef  Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
+  @@index([companyId], map: "inventoryledger_companyId_fkey")
+  @@index([locationId], map: "inventoryledger_locationId_fkey")
+  @@index([lotId], map: "inventoryledger_lotId_fkey")
+  @@index([productId], map: "inventoryledger_productId_fkey")
   @@map("inventoryledger")
 }
 
 model InventoryTransfer {
-  id               String   @id @default(uuid())
-  transferNumber   String   @unique
-  transferType     String   @default("BIN_TO_BIN") // BIN_TO_BIN, WAREHOUSE_TO_WAREHOUSE
+  id               String         @id @default(uuid())
+  transferNumber   String         @unique
+  transferType     String         @default("BIN_TO_BIN")
   sourceLocationId String
   destLocationId   String
-  status           String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  status           String         @default("PENDING")
   companyId        String
   createdBy        String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  company          Company        @relation(fields: [companyId], references: [id])
+  creator          User?          @relation("TransferCreatedUser", fields: [createdBy], references: [id])
+  destLocation     Location       @relation("DestLocation", fields: [destLocationId], references: [id])
+  sourceLocation   Location       @relation("SourceLocation", fields: [sourceLocationId], references: [id])
+  items            TransferItem[]
 
-  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  sourceLocation Location       @relation("SourceLocation", fields: [sourceLocationId], references: [id], onDelete: Cascade)
-  destLocation   Location       @relation("DestLocation", fields: [destLocationId], references: [id], onDelete: Cascade)
-  creator        User?          @relation("TransferCreatedUser", fields: [createdBy], references: [id], onDelete: Cascade)
-  items          TransferItem[]
-
+  @@index([companyId], map: "inventorytransfer_companyId_fkey")
+  @@index([createdBy], map: "inventorytransfer_createdBy_fkey")
+  @@index([destLocationId], map: "inventorytransfer_destLocationId_fkey")
+  @@index([sourceLocationId], map: "inventorytransfer_sourceLocationId_fkey")
   @@map("inventorytransfer")
 }
 
 model TransferItem {
-  id         String @id @default(uuid())
+  id         String            @id @default(uuid())
   transferId String
   productId  String
   lotId      String
   quantity   Int
+  batch      Batch             @relation(fields: [lotId], references: [id])
+  product    Product           @relation(fields: [productId], references: [id])
+  transfer   InventoryTransfer @relation(fields: [transferId], references: [id])
 
-  transfer InventoryTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
-  product  Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
-  batch    Batch             @relation(fields: [lotId], references: [id], onDelete: Cascade)
-
+  @@index([lotId], map: "transferitem_lotId_fkey")
+  @@index([productId], map: "transferitem_productId_fkey")
+  @@index([transferId], map: "transferitem_transferId_fkey")
   @@map("transferitem")
 }
 
@@ -445,18 +469,22 @@ model StockAdjustment {
   lotId            String
   locationId       String
   quantityDelta    Int
-  reasonCode       String // DAMAGE, LOST, MANUAL_CORRECTION, AUDIT_CORRECTION
+  reasonCode       String
   notes            String?
   createdBy        String?
   companyId        String
   createdAt        DateTime @default(now())
+  company          Company  @relation(fields: [companyId], references: [id])
+  creator          User?    @relation("AdjustmentCreatedUser", fields: [createdBy], references: [id])
+  location         Location @relation(fields: [locationId], references: [id])
+  batch            Batch    @relation(fields: [lotId], references: [id])
+  product          Product  @relation(fields: [productId], references: [id])
 
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  batch    Batch    @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  creator  User?    @relation("AdjustmentCreatedUser", fields: [createdBy], references: [id], onDelete: Cascade)
-  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
+  @@index([companyId], map: "stockadjustment_companyId_fkey")
+  @@index([createdBy], map: "stockadjustment_createdBy_fkey")
+  @@index([locationId], map: "stockadjustment_locationId_fkey")
+  @@index([lotId], map: "stockadjustment_lotId_fkey")
+  @@index([productId], map: "stockadjustment_productId_fkey")
   @@map("stockadjustment")
 }
 
@@ -466,45 +494,48 @@ model ExpiryAlert {
   productId     String
   expiryDate    DateTime
   daysRemaining Int
-  alertTier     String // ALERT_30D, ALERT_15D, ALERT_7D, EXPIRED
+  alertTier     String
   resolved      Boolean  @default(false)
   companyId     String
   createdAt     DateTime @default(now())
+  company       Company  @relation(fields: [companyId], references: [id])
+  batch         Batch    @relation(fields: [lotId], references: [id])
+  product       Product  @relation(fields: [productId], references: [id])
 
-  batch   Batch   @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
+  @@index([companyId], map: "expiryalert_companyId_fkey")
+  @@index([lotId], map: "expiryalert_lotId_fkey")
+  @@index([productId], map: "expiryalert_productId_fkey")
   @@map("expiryalert")
 }
 
 model PurchaseOrder {
-  id               String    @id @default(uuid())
-  poNumber         String    @unique
+  id               String              @id @default(uuid())
   supplier         String
   expectedDelivery DateTime?
-  totalCost        Float     @default(0.0)
-  status           String    @default("PENDING") // PENDING, APPROVED, RECEIVED
+  totalCost        Float               @default(0)
+  status           String              @default("PENDING")
   companyId        String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  poNumber         String              @unique
+  company          Company             @relation(fields: [companyId], references: [id])
+  items            PurchaseOrderItem[]
 
-  company Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  items   PurchaseOrderItem[]
-
+  @@index([companyId], map: "purchaseorder_companyId_fkey")
   @@map("purchaseorder")
 }
 
 model PurchaseOrderItem {
-  id              String @id @default(uuid())
+  id              String        @id @default(uuid())
   purchaseOrderId String
   productId       String
   quantity        Int
-  unitCost        Float  @default(0.0)
+  unitCost        Float         @default(0)
+  product         Product       @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
 
-  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-
+  @@index([productId], map: "purchaseorderitem_productId_fkey")
+  @@index([purchaseOrderId], map: "purchaseorderitem_purchaseOrderId_fkey")
   @@map("purchaseorderitem")
 }
 
@@ -514,80 +545,85 @@ model TransferOrder {
   destinationCompanyId String
   productId            String
   quantity             Int
-  status               String   @default("PENDING") // PENDING, DISPATCHED, RECEIVED
+  status               String   @default("PENDING")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  destinationCompany   Company  @relation("DestCompany", fields: [destinationCompanyId], references: [id])
+  product              Product  @relation(fields: [productId], references: [id])
+  sourceCompany        Company  @relation("SourceCompany", fields: [sourceCompanyId], references: [id])
 
-  sourceCompany      Company @relation("SourceCompany", fields: [sourceCompanyId], references: [id], onDelete: Cascade)
-  destinationCompany Company @relation("DestCompany", fields: [destinationCompanyId], references: [id], onDelete: Cascade)
-  product            Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
+  @@index([destinationCompanyId], map: "transferorder_destinationCompanyId_fkey")
+  @@index([productId], map: "transferorder_productId_fkey")
+  @@index([sourceCompanyId], map: "transferorder_sourceCompanyId_fkey")
   @@map("transferorder")
 }
 
 model PickList {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
   orderId   String
-  status    String   @default("PENDING") // PENDING, PICKING, COMPLETED
+  status    String         @default("PENDING")
   companyId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  company   Company        @relation(fields: [companyId], references: [id])
+  items     PickListItem[]
 
-  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  items   PickListItem[]
-
+  @@index([companyId], map: "picklist_companyId_fkey")
   @@map("picklist")
 }
 
 model PickListItem {
-  id             String  @id @default(uuid())
+  id             String   @id @default(uuid())
   pickListId     String
   productId      String
   batchId        String?
   binLocation    String
   targetQuantity Int
-  pickedQuantity Int     @default(0)
-  picked         Boolean @default(false)
+  pickedQuantity Int      @default(0)
+  picked         Boolean  @default(false)
+  batch          Batch?   @relation(fields: [batchId], references: [id])
+  pickList       PickList @relation(fields: [pickListId], references: [id])
+  product        Product  @relation(fields: [productId], references: [id])
 
-  pickList PickList @relation(fields: [pickListId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  batch    Batch?   @relation(fields: [batchId], references: [id], onDelete: Cascade)
-
+  @@index([batchId], map: "picklistitem_batchId_fkey")
+  @@index([pickListId], map: "picklistitem_pickListId_fkey")
+  @@index([productId], map: "picklistitem_productId_fkey")
   @@map("picklistitem")
 }
 
 model SalesOrder {
-  id              String   @id @default(uuid())
-  orderNumber     String?  @unique
+  id              String           @id @default(uuid())
   clientId        String
   companyId       String
-  priority        String?  @default("NORMAL")
-  status          String   @default("PENDING_REVIEW") // PENDING_REVIEW, PICKING, REJECTED, COMPLETED
+  status          String           @default("PENDING_REVIEW")
   rejectionReason String?
-  totalCost       Float    @default(0.0)
-  shippingAddress String?
-  poNumber        String?
+  totalCost       Float            @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  orderNumber     String?          @unique
+  priority        String?          @default("NORMAL")
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  poNumber        String?
+  shippingAddress String?
+  client          Client           @relation(fields: [clientId], references: [id])
+  company         Company          @relation(fields: [companyId], references: [id])
+  items           SalesOrderItem[]
 
-  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  company  Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  items    SalesOrderItem[]
-  invoices Invoice[]
-
+  @@index([clientId], map: "salesorder_clientId_fkey")
+  @@index([companyId], map: "salesorder_companyId_fkey")
   @@map("salesorder")
 }
 
 model SalesOrderItem {
-  id           String @id @default(uuid())
+  id           String     @id @default(uuid())
   salesOrderId String
   productId    String
   quantity     Int
+  product      Product    @relation(fields: [productId], references: [id])
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id])
 
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-
+  @@index([productId], map: "salesorderitem_productId_fkey")
+  @@index([salesOrderId], map: "salesorderitem_salesOrderId_fkey")
   @@map("salesorderitem")
 }
 
@@ -599,10 +635,11 @@ model Notification {
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
 
-  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
+  @@index([companyId], map: "notification_companyId_fkey")
+  @@index([userId], map: "notification_userId_fkey")
   @@map("notification")
 }
 
@@ -619,27 +656,73 @@ model Shipment {
   companyId         String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  company           Company  @relation(fields: [companyId], references: [id])
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
+  @@index([companyId], map: "shipment_companyId_fkey")
   @@map("shipment")
 }
 
-model Invoice {
-  id          String    @id @default(uuid())
-  invoiceNo   String    @unique
-  orderId     String
-  clientId    String
+model Plan {
+  id           String    @id @default(uuid())
+  name         String
+  price        Float
+  durationDays Int       @default(30)
+  features     String?   @db.LongText
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  payments     Payment[]
+
+  @@map("plan")
+}
+
+model SupportTicket {
+  id          String          @id @default(uuid())
+  title       String
+  description String          @db.Text
+  status      String          @default("OPEN")
+  priority    String          @default("MEDIUM")
   companyId   String
-  items       Json
-  totalAmount Decimal
-  status      String    @default("UNPAID")
-  createdAt   DateTime  @default(now())
-  paidAt      DateTime?
+  userId      String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  company     Company         @relation(fields: [companyId], references: [id])
+  user        User?           @relation(fields: [userId], references: [id])
+  messages    TicketMessage[]
 
-  salesOrder SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  client     Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId], map: "supportticket_companyId_fkey")
+  @@index([userId], map: "supportticket_userId_fkey")
+  @@map("supportticket")
+}
 
-  @@map("invoice")
+model TicketMessage {
+  id         String        @id @default(uuid())
+  ticketId   String
+  senderId   String?
+  senderRole String
+  message    String        @db.Text
+  createdAt  DateTime      @default(now())
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId], map: "ticketmessage_ticketId_fkey")
+  @@map("ticketmessage")
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  companyId     String
+  planId        String?
+  amount        Float
+  currency      String   @default("INR")
+  status        String   @default("PENDING")
+  transactionId String?
+  paymentDate   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  company       Company  @relation(fields: [companyId], references: [id])
+  plan          Plan?    @relation(fields: [planId], references: [id])
+
+  @@index([companyId], map: "payment_companyId_fkey")
+  @@index([planId], map: "payment_planId_fkey")
+  @@map("payment")
 }

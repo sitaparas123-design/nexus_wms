@@ -5,7 +5,7 @@ const { verifyToken, requireRole } = require('../../middlewares/auth');
 
 router.use(verifyToken);
 
-router.post('/', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']), transferController.createTransfer);
+router.post('/', requireRole(['ADMIN', 'WAREHOUSE_MANAGER', 'INVENTORY_CLERK']), transferController.createTransfer);
 router.get('/', transferController.getTransfers);
 router.get('/:id', transferController.getTransferById);
 

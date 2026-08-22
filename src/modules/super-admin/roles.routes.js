@@ -6,7 +6,7 @@ const { verifyToken, requireRole } = require('../../middlewares/auth');
 // Allow all authenticated users to read roles & permissions
 router.get('/', verifyToken, rolesController.getRoles);
 
-// Restrict updating permissions to SUPER_ADMIN only
-router.put('/:roleKey/permissions', verifyToken, requireRole(['SUPER_ADMIN']), rolesController.updateRolePermissions);
+// Restrict updating permissions to ADMIN only
+router.put('/:roleKey/permissions', verifyToken, requireRole(['ADMIN']), rolesController.updateRolePermissions);
 
 module.exports = router;

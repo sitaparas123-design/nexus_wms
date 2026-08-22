@@ -2,28 +2,35 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
-async function createAdmin() {
-  try {
-    const admin = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
-    if (!admin) {
-      const hashedPassword = await bcrypt.hash('123456', 10);
-      await prisma.user.create({
-        data: {
-          name: 'Super Admin',
-          email: 'alex@stitchnexus.com',
-          password: hashedPassword,
-          role: 'SUPER_ADMIN',
-          status: 'ACTIVE'
-        }
-      });
-      console.log('Super Admin created');
-    } else {
-      console.log('Super Admin already exists');
-    }
-  } catch(e) {
-    console.error(e);
-  } finally {
-    await prisma.$disconnect();
+async function main() {
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  
+  // Find an existing company or create one
+  let company = await prisma.company.findFirst();
+  if (!company) {
+    company = await prisma.company.create({
+      data: { name: 'Admin Company', industry: 'Tech' }
+    });
   }
+
+  const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@test.com' } });
+  if (existingAdmin) {
+    console.log('Super admin already exists: admin@test.com / admin123');
+    return;
+  }
+
+  const admin = await prisma.user.create({
+    data: {
+      name: 'Admin',
+      email: 'admin@test.com',
+      password: hashedPassword,
+      role: 'ADMIN',
+      companyId: company.id,
+      status: 'ACTIVE'
+    }
+  });
+
+  console.log('Created Admin: admin@test.com / admin123');
 }
-createAdmin();
+
+main().catch(console.error).finally(() => prisma.$disconnect());

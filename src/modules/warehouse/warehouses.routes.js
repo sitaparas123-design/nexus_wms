@@ -6,9 +6,9 @@ const { verifyToken, requireRole } = require('../../middlewares/auth');
 router.use(verifyToken);
 
 router.get('/', getWarehouses);
-router.post('/', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), createWarehouse);
+router.post('/', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), createWarehouse);
 
-router.put('/:id', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), updateWarehouse);
-router.delete('/:id', requireRole(['SUPER_ADMIN', 'WAREHOUSE_MANAGER']), deleteWarehouse);
+router.put('/:id', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), updateWarehouse);
+router.delete('/:id', requireRole(['ADMIN', 'WAREHOUSE_MANAGER']), deleteWarehouse);
 
 module.exports = router;
